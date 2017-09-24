@@ -3,11 +3,11 @@
 import pickle
 import localcache
 
-cargoVolumeLim = 400
-budgetLim = 15e6
+cargoVolumeLim = 4000
+budgetLim = 36e6
 highsecOnly = True
 minMargin = 0.5
-minProfit = 1e6
+minProfit = 5e6
 
 name = 'name'
 price = 'price'
@@ -55,50 +55,111 @@ stations = localcache.Cache('station',
 # except IOError:
 #     print('File not found, will create a new file.')
 #     stations = dict()
+def totalVolume(ordersList):
+    volume = 0
+    for order in ordersList:
+        volume += order['volume_remain']
+        pass
+    return volume
+
+def totalISK(ordersList, volume):
+    assert volume <= totalVolume(ordersList)
+    # print('Calculating total amount... Volume: {}'.format(volume))
+    amount = 0
+    volumeRemain = volume
+    for order in ordersList:
+        if order['volume_remain'] > volumeRemain:
+            amount += (volumeRemain * order['price'])
+            # print('{:,.2f} ISK, \t{}({})'.format(order['price'], volumeRemain, order['volume_remain']))
+            break
+        else:
+            amount += (order['volume_remain'] * order['price'])
+            volumeRemain -= order['volume_remain']
+            # print('{:,.2f} ISK, \t{}'.format(order['price'], order['volume_remain']))
+            pass
+        pass
+    # print('Total amount: {:,.2f} ISK.'.format(amount))
+    return amount
 
 tradePairs = []
 for typeId in orders:
-    if len(orders[typeId][sell]) == 0:
+#     if len(orders[typeId][sell]) == 0:
+#         continue
+# 
+#     if len(orders[typeId][buy]) == 0:
+#         continue
+# 
+    if orders[typeId]['lowest_sell'] > orders[typeId]['highest_buy']:
         continue
 
-    if len(orders[typeId][buy]) == 0:
-        continue
-
-    if orders[typeId][sell][0][price] > orders[typeId][buy][0][price]:
-        continue
-
-    for sellOrder in orders[typeId][sell]:
-        for buyOrder in orders[typeId][buy]:
-            if sellOrder[price] > buyOrder[price]:
+    for locSell in orders[typeId][sell]:
+        for locBuy in orders[typeId][buy]:
+            sellOrdersList = orders[typeId][sell][locSell]
+            buyOrdersList = orders[typeId][buy][locBuy]
+            if ( len(sellOrdersList) == 0 ) or ( len(buyOrdersList) == 0 ):
                 continue
+            if sellOrdersList[0][price] > buyOrdersList[0][price]:
+                continue
+            profitLimFactor = 'Market'
 
-            availVolume = min(sellOrder[volume], buyOrder[volume])
-            profit = availVolume * (buyOrder[price] - sellOrder[price])
-            margin = buyOrder[price] / sellOrder[price] - 1
+            availVolume = min(totalVolume(sellOrdersList), totalVolume(buyOrdersList))
+            sellTotal = totalISK(sellOrdersList, availVolume)
+            buyTotal = totalISK(buyOrdersList, availVolume)
+            profit = buyTotal - sellTotal
+            margin = buyOrdersList[0][price] / sellOrdersList[0][price] - 1
             if margin < minMargin:
+                print('Margin = {:.2%} < {:.2%}, too low.'.format(margin, minMargin))
                 continue
             if profit < minProfit:
+                print('Profit = {:,.2f} ISK < {:,.2f} ISK, too low.'.format(profit, minProfit))
                 continue
-            if buyOrder[price] > budgetLim:
+            if sellOrdersList[0][price] > budgetLim:
+                print('Price = {:,.2f} ISK > {:,.2f} ISK, too high.'.\
+                        format(sellOrdersList[0][price], budgetLim))
                 continue
             try:
                 if cargoVolumeLim != 0:
                     itemVolume = items.get(typeId)['volume']
                     if itemVolume > cargoVolumeLim:
+                        print('Item volume = {}m3 > {}m3, too big.'.format(itemVolume, cargoVolumeLim))
                         continue
-                    availVolume = min(availVolume, cargoVolumeLim // itemVolume)
-                    profit = availVolume * (buyOrder[price] - sellOrder[price])
-                    if profit < minProfit:
-                        continue
+                    if availVolume > (cargoVolumeLim // itemVolume):
+                        profitLimFactor = 'Cargo space'
+                        availVolume = (cargoVolumeLim // itemVolume)
+                        # Now that volume is recalculated.
+                        sellTotal = totalISK(sellOrdersList, availVolume)
+                        buyTotal = totalISK(buyOrdersList, availVolume)
+                        profit = buyTotal - sellTotal
                     pass
+                if budgetLim != 0:
+                    if totalISK(buyOrdersList, availVolume) > budgetLim:
+                        profitLimFactor = 'Budget'
+                        availVolume -= 1
+                        while(totalISK(buyOrdersList, availVolume) > budgetLim):
+                            availVolume -= 1
+                            pass
+                        sellTotal = totalISK(sellOrdersList, availVolume)
+                        buyTotal = totalISK(buyOrdersList, availVolume)
+                        profit = buyTotal - sellTotal
+                        pass
+                    pass
+
+                # Check updated profit
+                if profit < minProfit:
+                    print('Profit = {:,.2f} ISK < {:,.2f} ISK, too low.'.format(profit, minProfit))
+                    continue
+                # Actual margin, can only be lower.
+                marginActual = buyTotal / sellTotal - 1
                 if highsecOnly:
                     if systems.get(
-                            stations.get(buyOrder['location_id'])['system_id']
+                            stations.get(locBuy)['system_id']
                             )[security] < 0.5:
+                        print('Buyer location low-sec.')
                         continue
                     if systems.get(
-                            stations.get(sellOrder['location_id'])['system_id']
+                            stations.get(locSell)['system_id']
                             )[security] < 0.5:
+                        print('Seller location low-sec.')
                         continue
                     pass
                 pass
@@ -109,16 +170,17 @@ for typeId in orders:
                 ('volume', availVolume),
                 ('profit', profit),
                 ('margin', margin),
-                ('buy', buyOrder),
-                ('sell', sellOrder)
+                ('margin_actual', marginActual),
+                ('buy', buyOrdersList),
+                ('sell', sellOrdersList)
                 ])
             tradePairs.append(legitPair)
             with open('./result.txt', 'a') as outputText:
-                outputText.write('Item: {}, Profit: {:,.2f}ISK, Margin: {:.2%}, From: {}, To: {}.\n'.
-                        format(items.get(typeId)['name'], profit, margin,
-                            stations.get(sellOrder['location_id'])['name'],
-                            stations.get(buyOrder['location_id'])['name']
-                            ))
+                outputText.write('Item: \t{} \nProfit: \t{:,.2f} ISK \nMargin: \t{:.2%}/{:.2%} \n'.
+                        format(items.get(typeId)['name'], profit, margin, marginActual) + 
+                        'Volume: \t{} \nCost: \t{:,.2f} ISK \n'.format(availVolume, sellTotal) + 
+                        'From: \t{} \n To: \t{} \n'.format(stations.get(locSell)['name'], stations.get(locBuy)['name']) + 
+                        'Profit limit factor: \t{}.\n'.format(profitLimFactor) + '\n')
                 pass
             pass
         pass
