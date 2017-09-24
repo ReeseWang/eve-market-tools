@@ -8,6 +8,7 @@ print('Getting solar systems list...')
 req = requests.get('https://esi.tech.ccp.is/latest/universe/systems/?datasource=tranquility')
 assert req.status_code == 200
 systems = req.json()
+print('There are {} solar systems in this universe'.format(len(systems)))
 
 systemsInfo = dict()
 for systemId in systems:
