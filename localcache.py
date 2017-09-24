@@ -30,7 +30,8 @@ class Cache:
     def get(self, ID):
         ID = str(ID)
         if self.data.get(ID) == []:
-            raise Exception('ID previously not found on server.')
+            raise Exception('{} {} previously not found on server.'.
+                    format(self.name.capitalize(), ID))
         if self.data.get(ID) == None:
             print('{} {} not found in local cache, retriving from server...'.
                     format(self.name.capitalize(), ID))
@@ -41,9 +42,12 @@ class Cache:
                 raise Exception(str(req.status_code) + ': ' + req.json()['error'])
             self.data[ID] = req.json()
             self.save()
-            if req.json().get('name') != None:
-                print('{} {} is "{}", saved to local cache.'.
-                        format(self.name.capitalize(), ID, req.json()['name']))
+            if getattr(req.json(), 'get', None) != None:
+                if req.json().get('name') != None:
+                    print('{} {} is "{}", saved to local cache.'.
+                            format(self.name.capitalize(), ID, req.json()['name']))
+                    pass
+                pass
             pass
         return self.data[ID]
         
