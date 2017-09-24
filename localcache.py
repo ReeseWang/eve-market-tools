@@ -36,10 +36,9 @@ class Cache:
                     format(self.name.capitalize(), ID))
             req = requests.get(self.prefix + ID + self.suffix)
             if req.status_code != 200:
-                print(str(req.status_code) + ': ' + req.json['error'])
                 self.data[ID] = []
                 self.save()
-                raise Exception(str(req.status_code) + ': ' + req.json['error'])
+                raise Exception(str(req.status_code) + ': ' + req.json()['error'])
             self.data[ID] = req.json()
             self.save()
             if req.json().get('name') != None:
