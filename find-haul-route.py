@@ -5,7 +5,9 @@ import localcache
 
 cargoVolumeLim = 400
 budgetLim = 300e6
-highsecOnly = True
+highsecRoute = False
+minSecSta = 0
+maxSecSta = 1
 minMargin = 0.2
 minProfit = 10e6
 
@@ -33,7 +35,7 @@ systems = localcache.Cache('system',
 stations = localcache.Cache('station',
         'https://esi.tech.ccp.is/latest/universe/stations/',
         '/?datasource=tranquility')
-if highsecOnly:
+if highsecRoute:
     routes = localcache.Cache('routehigh',
             'https://esi.tech.ccp.is/latest/route/',
             '/?datasource=tranquility&flag=secure')
@@ -182,18 +184,16 @@ for typeId in orders:
                     continue
                 # Actual margin, can only be lower.
                 marginActual = buyTotal / sellTotal - 1
-                if highsecOnly:
-                    if systems.get(
-                            stations.get(locBuy)['system_id']
-                            )[security] < 0.5:
-                        # print('Buyer location low-sec.')
-                        continue
-                    if systems.get(
-                            stations.get(locSell)['system_id']
-                            )[security] < 0.5:
-                        # print('Seller location low-sec.')
-                        continue
-                    pass
+                if not ( minSecSta < systems.get(
+                        stations.get(locBuy)['system_id']
+                        )[security] < maxSecSta ):
+                    print('Buyer location security status does not meet requirements.')
+                    continue
+                if not ( minSecSta < systems.get(
+                        stations.get(locSell)['system_id']
+                        )[security] < maxSecSta ):
+                    print('Seller location security status does not meet requirements.')
+                    continue
                 jumps = len(getRoute(stations.get(locSell)['system_id'],
                     stations.get(locBuy)['system_id'])) - 1
                 if jumps == -1:
