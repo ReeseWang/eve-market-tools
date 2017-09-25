@@ -214,15 +214,15 @@ for typeId in orders:
                 ])
             tradePairs.append(legitPair)
             with open('./result.txt', 'a') as outputText:
-                outputText.write('Item: \t{} \nProfit: \t{:,.2f} ISK \nMargin: \t{:.2%}/{:.2%} \n'.
+                outputText.write('Item: \t\t{} \nProfit: \t{:,.2f} ISK \nMargin: \t{:.2%}/{:.2%} \n'.
                         format(items.get(typeId)['name'], profit, margin, marginActual) + 
-                        'Volume: \t{} \nCost: \t{:,.2f} ISK \n'.format(availVolume, sellTotal) + 
+                        'Volume: \t{} \nCost: \t\t{:,.2f} ISK \n'.format(availVolume, sellTotal) + 
                         'Min. volume: \t{} \n'.format(minVolume) +
                         'Min. cost: \t{:,.2f} ISK \n'.format(minCost) +
-                        'From: \t{} \n'.format(stations.get(locSell)['name']) + 
-                        'To: \t{} \n'.format(stations.get(locBuy)['name']) + 
-                        'Jumps: \t{} \n'.format(jumps) + 
-                        'Profit limit factor: \t{}.\n'.format(profitLimFactor) + '\n')
+                        'From: \t\t{} \n'.format(stations.get(locSell)['name']) + 
+                        'To: \t\t{} \n'.format(stations.get(locBuy)['name']) + 
+                        'Jumps: \t\t{} \n'.format(jumps) + 
+                        'Profit limit factor: {}.\n'.format(profitLimFactor) + '\n')
                 pass
             pass
         pass
