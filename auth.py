@@ -6,8 +6,6 @@ import urllib.parse
 import json
 import base64
 import requests
-from bravado.requests_client import RequestsClient
-from bravado.client import SwaggerClient
 
 loginUrlBase = 'https://login.eveonline.com/oauth/authorize/?'
 loginUrlPara = { 'response_type': 'code',
