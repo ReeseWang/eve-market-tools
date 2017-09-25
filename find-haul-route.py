@@ -3,11 +3,11 @@
 import pickle
 import localcache
 
-cargoVolumeLim = 4000
+cargoVolumeLim = 400
 budgetLim = 300e6
-highsecOnly = True 
-minMargin = 0.5
-minProfit = 3e6
+highsecOnly = True
+minMargin = 0.2
+minProfit = 10e6
 
 name = 'name'
 price = 'price'
@@ -196,6 +196,8 @@ for typeId in orders:
                     pass
                 jumps = len(getRoute(stations.get(locSell)['system_id'],
                     stations.get(locBuy)['system_id'])) - 1
+                if jumps == -1:
+                    continue
                 pass
             except Exception as errorMessage:
                 print(errorMessage.args[0])
