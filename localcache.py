@@ -4,12 +4,14 @@ import os
 
 class Cache:
 
-    def __init__(self, name, prefix, suffix, folder='./cache/', fileSuffix='.bin'):
+    def __init__(self, name, prefix, suffix, 
+            folder='./cache/', fileSuffix='.bin', getMethod = requests.get):
         self.name = name
         self.prefix = prefix
         self.suffix = suffix
         self.folder = folder
         self.fileSuffix = fileSuffix
+        self.getMethod = getMethod
         if not os.path.isdir(folder):
             os.makedirs(folder)
             pass
@@ -35,7 +37,7 @@ class Cache:
         if self.data.get(ID) == None:
             print('{} {} not found in local cache, retriving from server...'.
                     format(self.name.capitalize(), ID))
-            req = requests.get(self.prefix + ID + self.suffix)
+            req = self.getMethod(self.prefix + ID + self.suffix)
             if req.status_code != 200:
                 self.data[ID] = []
                 self.save()

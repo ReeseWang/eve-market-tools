@@ -2,6 +2,8 @@
 
 import pickle
 import localcache
+import requests
+from auth import authedClient
 
 cargoVolumeLim = 3045
 budgetLim = 165e6
@@ -26,6 +28,11 @@ with open('./cache/ordersAllTypeIdSorted.bin', 'rb') as inputFile:
     orders = pickle.load(inputFile)
     pass
 
+client = authedClient()
+chaID = client.getCharacterID()
+print('Getting structure list...')
+structList = requests.get('https://esi.tech.ccp.is/latest/universe/structures/?datasource=tranquility').json()
+
 items = localcache.Cache('item', 
         'https://esi.tech.ccp.is/latest/universe/types/',
         '/?datasource=tranquility&language=en-us')
@@ -43,29 +50,22 @@ else:
     routes = localcache.Cache('route',
             'https://esi.tech.ccp.is/latest/route/',
             '/?datasource=tranquility&flag=shortest')
+structures = localcache.Cache('structure',
+        'https://esi.tech.ccp.is/latest/universe/structures/',
+        '/?datasource=tranquility', getMethod = client.get)
 
-# print('Loading systems info...')
-# with open('./cache/systemsInfo.bin', 'rb') as inputFile:
-#     print("Opened '{}'".format(inputFile.name))
-#     systems = pickle.load(inputFile)
-#     pass
+def getOrderSolarSystem(location):
+    if int(location) in structList:
+        return systems.get(structures.get(location)['solar_system_id'])
+    else:
+        return systems.get(stations.get(location)['system_id'])
 
-# print('Loading items info...')
-# with open('./cache/itemsInfo.bin', 'rb') as inputFile:
-#     print("Opened '{}'".format(inputFile.name))
-#     items = pickle.load(inputFile)
-#     pass
+def getOrderLocationName(location):
+    if int(location) in structList:
+        return structures.get(location)['name']
+    else:
+        return stations.get(location)['name']
 
-# try:
-#     print('Loading space stations info...')
-#     with open('./cache/stationsInfo.bin', 'rb') as inputFile:
-#         print("Opened '{}'".format(inputFile.name))
-#         stations = pickle.load(inputFile)
-#         pass
-#     pass
-# except IOError:
-#     print('File not found, will create a new file.')
-#     stations = dict()
 def totalVolume(ordersList):
     volume = 0
     for order in ordersList:
@@ -148,14 +148,14 @@ for typeId in orders:
                 continue
             minCost = totalISK(sellOrdersList, minVolume)
             if minCost > budgetLim:
-                print('Min. cost = {:,.2f} ISK > {:,.2f} ISK, too high.'.\
-                        format(minCost, budgetLim))
+                # print('Min. cost = {:,.2f} ISK > {:,.2f} ISK, too high.'.\
+                #         format(minCost, budgetLim))
                 continue
             try:
                 if cargoVolumeLim != 0:
                     itemVolume = items.get(typeId)['volume']
                     if itemVolume > cargoVolumeLim:
-                        print('Item volume = {}m3 > {}m3, too big.'.format(itemVolume, cargoVolumeLim))
+                        # print('Item volume = {}m3 > {}m3, too big.'.format(itemVolume, cargoVolumeLim))
                         continue
                     if availVolume > (cargoVolumeLim // itemVolume):
                         profitLimFactor = 'Cargo space'
@@ -184,20 +184,17 @@ for typeId in orders:
                     continue
                 # Actual margin, can only be lower.
                 marginActual = buyTotal / sellTotal - 1
-                secBuy = systems.get(
-                            stations.get(locBuy)['system_id']
-                            )[security]
+                sysBuy = getOrderSolarSystem(locBuy)
+                secBuy = sysBuy[security]
                 if not ( minSecSta < secBuy < maxSecSta ):
-                    print('Buyer location security status does not meet requirements.')
+                    # print('Buyer location security status does not meet requirements.')
                     continue
-                secSell = systems.get(
-                            stations.get(locSell)['system_id']
-                            )[security]
+                sysSell = getOrderSolarSystem(locSell)
+                secSell = sysSell[security]
                 if not ( minSecSta < secSell < maxSecSta ):
-                    print('Seller location security status does not meet requirements.')
+                    # print('Seller location security status does not meet requirements.')
                     continue
-                jumps = len(getRoute(stations.get(locSell)['system_id'],
-                    stations.get(locBuy)['system_id'])) - 1
+                jumps = len(getRoute(sysSell['system_id'], sysBuy['system_id'])) - 1
                 if jumps == -1:
                     continue
                 pass
@@ -223,8 +220,8 @@ for typeId in orders:
                         'Min. cost: \t{:,.2f} ISK \n'.format(minCost) +
                         'Item size: \t{:.2f} m3 \n'.format(itemVolume) +
                         'Total size: \t{:.2f} m3 \n'.format(itemVolume * availVolume) +
-                        'From: \t\t{} {:.2f} {} \n'.format(locSell, secSell, stations.get(locSell)['name']) + 
-                        'To: \t\t{} {:.2f} {} \n'.format(locBuy, secBuy, stations.get(locBuy)['name']) + 
+                        'From: \t\t{} {:.2f} {} \n'.format(locSell, secSell, getOrderLocationName(locSell)) + 
+                        'To: \t\t{} {:.2f} {} \n'.format(locBuy, secBuy, getOrderLocationName(locBuy)) + 
                         'Jumps: \t\t{} \n'.format(jumps) + 
                         'Profit limit factor: {}.\n'.format(profitLimFactor) + '\n')
                 pass

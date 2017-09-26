@@ -23,12 +23,11 @@ class authedClient:
     def updateAuthHeader(self):
         self.headers = {
                 'Authorization': self.tokenData['token_type'] + ' ' + \
-                        self.tokenData['access_token'],
-                'Host': 'login.eveonline.com'
+                        self.tokenData['access_token']
                 }
         pass
 
-    def login(self):
+    def _login(self):
         loginUrlBase = 'https://login.eveonline.com/oauth/authorize/?'
         loginUrlPara = { 'response_type': 'code',
                 'redirect_uri': secret.callbackUrl,
@@ -44,7 +43,7 @@ class authedClient:
         self.tokenData = self.postToGetToken(postData)
         pass
 
-    def refresh(self):
+    def _refresh(self):
         print('Token expired, refreshing...')
         postData = 'grant_type=refresh_token&refresh_token=' + self.tokenData['refresh_token']
         self.tokenData = self.postToGetToken(postData)
@@ -53,7 +52,7 @@ class authedClient:
     def getToken(self, source):
         assert source in ['login', 'file', 'refresh']
         if source == 'refresh':
-            self.refresh()
+            self._refresh()
             self.writeTokenFile()
         elif source == 'file':
             with open(self.tokenFilePath, 'rb') as self.tokenFile:
@@ -62,7 +61,7 @@ class authedClient:
                 pass
             pass
         elif source == 'login':
-            self.login()
+            self._login()
             self.writeTokenFile()
             pass
         self.updateAuthHeader()
@@ -80,20 +79,22 @@ class authedClient:
                 'Host': 'login.eveonline.com'
                 }
 
-        respond = requests.post('https://login.eveonline.com/oauth/token',
+        response = requests.post('https://login.eveonline.com/oauth/token',
                 headers = postHeaders,
                 data = postData)
 
-        if respond.ok:
-            return respond.json()
+        if response.ok:
+            return response.json()
         else:
-            sys.exit('Could not get token. Error {}: {}. {}.'.format(
-                respond.status_code,
-                respond.json()['error'],
-                respond.json()['error_description'])
-                )
+            sys.exit('Could not get token. {}'.format(self.genErrorString(response)))
             pass
         pass
+
+    def genErrorString(response):
+        return('Error {}: {}. {}.'.format(
+                response.status_code,
+                response.json()['error'],
+                response.json()['error_description']))
 
     def writeTokenFile(self):
         print('Successfully got token, writing to file...')
@@ -107,9 +108,24 @@ class authedClient:
         pass
 
     def get(self, url):
-        respond = requests.get(url, headers = self.headers)
-        return respond
-        pass
+        try:
+            response = requests.get(url, headers = self.headers)
+            response.raise_for_status()
+            if response.ok:
+                return response
+            else:
+                if response.json().get['error_description'] == 'expired':
+                    self.getToken('refresh')
+                    response = requests.get(url, headers = self.headers)
+        except requests.exceptions.HTTPError as error:
+            if 'expired' in response.text:
+                self.getToken('refresh')
+            else:
+                import sys
+                sys.exit(error)
+        except Exception as error:
+            import sys
+            sys.exit(error)
 
     def getCharacterID(self):
         cha = self.get('https://login.eveonline.com/oauth/verify').json()
