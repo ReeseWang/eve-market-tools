@@ -3,6 +3,7 @@
 import json
 import requests
 import pickle
+import os
 
 print('Getting region list...')
 req = requests.get('https://esi.tech.ccp.is/latest/universe/regions/?datasource=tranquility')
@@ -31,6 +32,11 @@ for reg in regions:
         pass
     print('Region {} has {} orders'.format(reg, len(orders[str(reg)])))
     pass
+
+if not os.path.isdir('./cache/'):
+    os.makedirs('./cache/')
+    pass
+
 with open('cache/ordersAll.bin', 'wb') as output:
     print('Dumping order info to file {}...'.format(output.name))
     pickle.dump(orders, output, pickle.HIGHEST_PROTOCOL)
