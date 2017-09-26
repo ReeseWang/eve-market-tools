@@ -223,6 +223,7 @@ for typeId in orders:
                         'From: \t\t{} {:.2f} {} \n'.format(locSell, secSell, getOrderLocationName(locSell)) + 
                         'To: \t\t{} {:.2f} {} \n'.format(locBuy, secBuy, getOrderLocationName(locBuy)) + 
                         'Jumps: \t\t{} \n'.format(jumps) + 
+                        'Profit/jump: \t{:,.2f} ISK \n'.format(profit / jumps) + 
                         'Profit limit factor: {}.\n'.format(profitLimFactor) + '\n')
                 pass
             pass
