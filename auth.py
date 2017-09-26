@@ -117,6 +117,7 @@ class authedClient:
             if 'expired' in response.text:
                 self.getToken('refresh')
                 response = requests.get(url, headers = self.headers)
+                return response
             else:
                 import sys
                 sys.exit(error)
