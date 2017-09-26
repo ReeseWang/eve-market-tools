@@ -113,13 +113,10 @@ class authedClient:
             response.raise_for_status()
             if response.ok:
                 return response
-            else:
-                if response.json().get['error_description'] == 'expired':
-                    self.getToken('refresh')
-                    response = requests.get(url, headers = self.headers)
         except requests.exceptions.HTTPError as error:
             if 'expired' in response.text:
                 self.getToken('refresh')
+                response = requests.get(url, headers = self.headers)
             else:
                 import sys
                 sys.exit(error)
