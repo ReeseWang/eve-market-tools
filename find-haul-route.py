@@ -184,14 +184,16 @@ for typeId in orders:
                     continue
                 # Actual margin, can only be lower.
                 marginActual = buyTotal / sellTotal - 1
-                if not ( minSecSta < systems.get(
-                        stations.get(locBuy)['system_id']
-                        )[security] < maxSecSta ):
+                secBuy = systems.get(
+                            stations.get(locBuy)['system_id']
+                            )[security]
+                if not ( minSecSta < secBuy < maxSecSta ):
                     print('Buyer location security status does not meet requirements.')
                     continue
-                if not ( minSecSta < systems.get(
-                        stations.get(locSell)['system_id']
-                        )[security] < maxSecSta ):
+                secSell = systems.get(
+                            stations.get(locSell)['system_id']
+                            )[security]
+                if not ( minSecSta < secSell < maxSecSta ):
                     print('Seller location security status does not meet requirements.')
                     continue
                 jumps = len(getRoute(stations.get(locSell)['system_id'],
@@ -221,8 +223,8 @@ for typeId in orders:
                         'Min. cost: \t{:,.2f} ISK \n'.format(minCost) +
                         'Item size: \t{:.2f} m3 \n'.format(itemVolume) +
                         'Total size: \t{:.2f} m3 \n'.format(itemVolume * availVolume) +
-                        'From: \t\t{} {} \n'.format(locSell, stations.get(locSell)['name']) + 
-                        'To: \t\t{} {} \n'.format(locBuy, stations.get(locBuy)['name']) + 
+                        'From: \t\t{} {:.2f} {} \n'.format(locSell, secSell, stations.get(locSell)['name']) + 
+                        'To: \t\t{} {:.2f} {} \n'.format(locBuy, secBuy, stations.get(locBuy)['name']) + 
                         'Jumps: \t\t{} \n'.format(jumps) + 
                         'Profit limit factor: {}.\n'.format(profitLimFactor) + '\n')
                 pass
