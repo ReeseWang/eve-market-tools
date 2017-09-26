@@ -3,8 +3,8 @@
 import pickle
 import localcache
 
-cargoVolumeLim = 400
-budgetLim = 300e6
+cargoVolumeLim = 3045
+budgetLim = 165e6
 highsecRoute = False
 minSecSta = 0
 maxSecSta = 1
@@ -214,13 +214,15 @@ for typeId in orders:
                 ])
             tradePairs.append(legitPair)
             with open('./result.txt', 'a') as outputText:
-                outputText.write('Item: \t\t{} \nProfit: \t{:,.2f} ISK \nMargin: \t{:.2%}/{:.2%} \n'.
-                        format(items.get(typeId)['name'], profit, margin, marginActual) + 
+                outputText.write('Item: \t\t{} {} \nProfit: \t{:,.2f} ISK \nMargin: \t{:.2%}/{:.2%} \n'.
+                        format(typeId, items.get(typeId)['name'], profit, margin, marginActual) + 
                         'Volume: \t{} \nCost: \t\t{:,.2f} ISK \n'.format(availVolume, sellTotal) + 
                         'Min. volume: \t{} \n'.format(minVolume) +
                         'Min. cost: \t{:,.2f} ISK \n'.format(minCost) +
-                        'From: \t\t{} \n'.format(stations.get(locSell)['name']) + 
-                        'To: \t\t{} \n'.format(stations.get(locBuy)['name']) + 
+                        'Item size: \t{:.2f} m3 \n'.format(itemVolume) +
+                        'Total size: \t{:.2f} m3 \n'.format(itemVolume * availVolume) +
+                        'From: \t\t{} {} \n'.format(locSell, stations.get(locSell)['name']) + 
+                        'To: \t\t{} {} \n'.format(locBuy, stations.get(locBuy)['name']) + 
                         'Jumps: \t\t{} \n'.format(jumps) + 
                         'Profit limit factor: {}.\n'.format(profitLimFactor) + '\n')
                 pass
