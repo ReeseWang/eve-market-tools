@@ -3,7 +3,7 @@
 import pickle
 import localcache
 import requests
-from auth import authedClient
+from esiauth import authedClient
 
 cargoVolumeLim = 3045
 budgetLim = 165e6
