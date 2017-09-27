@@ -125,6 +125,23 @@ class authedClient:
             import sys
             sys.exit(error)
 
+    def post(self, url, data=None):
+        try:
+            response = requests.post(url, data, headers = self.headers)
+            response.raise_for_status()
+            return response
+        except requests.exceptions.HTTPError as error:
+            if 'expired' in response.text:
+                self.getToken('refresh')
+                response = requests.get(url, headers = self.headers)
+                return response
+            else:
+                import sys
+                sys.exit(error)
+        except Exception as error:
+            import sys
+            sys.exit(error)
+
     def getCharacterID(self):
         cha = self.get('https://login.eveonline.com/oauth/verify').json()
         return cha['CharacterID']
