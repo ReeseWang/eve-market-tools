@@ -5,7 +5,7 @@ import localcache
 import requests
 from esiauth import authedClient
 
-cargoVolumeLim = 3045
+cargoVolumeLim = 640
 budgetLim = 165e6
 highsecRoute = False
 minSecSta = 0
@@ -127,6 +127,24 @@ def tradePairInfoStr(pair):
                         'Profit limit factor: {profit_limit_factor}.'
                     ]).format_map(pair)
 
+def setDestination(dest):
+    client.post('''https://esi.tech.ccp.is/latest\
+/ui/autopilot/waypoint/?add_to_beginning=false&clear_other_waypoints=true&\
+datasource=tranquility&destination_id=''' + str(dest))
+    pass
+
+def openMarketDetail(typeId):
+    client.post('''https://esi.tech.ccp.is/latest\
+/ui/openwindow/marketdetails/?datasource=tranquility&type_id=''' + str(typeId))
+
+chaOnline = client.get('https://esi.tech.ccp.is/latest/characters/' + str(chaID) + '/online/?datasource=tranquility').json()
+if chaOnline:
+    print('Character online. triangulating...')
+    locCurr = client.get('https://esi.tech.ccp.is/latest/characters/' + str(chaID) + '/location/?datasource=tranquility').json()['solar_system_id']
+    print('Character found in system {}.'.format(systems.get(locCurr)['name']))
+else:
+    locCurr = None
+
 tradePairs = []
 for typeId in orders:
 #     if len(orders[typeId][sell]) == 0:
@@ -214,6 +232,12 @@ for typeId in orders:
                 jumps = len(getRoute(sysSell['system_id'], sysBuy['system_id'])) - 1
                 if jumps == -1:
                     continue
+                if locCurr is not None:
+                    # Take jumps from current location into consideration
+                    jumpsCurr = len(getRoute(locCurr, sysSell['system_id'])) - 1
+                    if jumpsCurr == -1:
+                        continue
+                    jumps += jumpsCurr
                 pass
             except Exception as errorMessage:
                 print(errorMessage.args[0])
@@ -245,6 +269,41 @@ for typeId in orders:
                 outputText.write(tradePairInfoStr(legitPair) + '\n\n')
                 pass
             pass
+        pass
+    pass
+
+command = 'dummy'
+sortField = 'profit'
+reverse = True
+commandDict = { 'p': 'profit', 'm': 'margin', 'j': 'jumps' , 'u': 'profit_per_jump'}
+while command.lower() != 'exit':
+    tradePairs.sort(key=lambda pair: pair[sortField], reverse=reverse)
+    for i in range(0, 3):
+        print(tradePairInfoStr(tradePairs[i]), end='\n\n')
+    command = input('''Please select 1~3.
+'p' to sort by profit,
+'m' to sort by margin(actual),
+'j' to sort by jumps,
+'u' to sort by profit per jump,
+Capitalize ('P', 'M', 'J') to sort ascending.
+'exit' to exit:''')
+    if command in ['1', '2', '3']:
+        idx = int(command) - 1
+        command = input('"g" to go, "c" to clear this record.')
+        if command == 'c':
+            del tradePairs[idx]
+        elif command == 'g':
+            setDestination(tradePairs[idx]['from_id'])
+            openMarketDetail(tradePairs[idx]['type_id'])
+            input('Hit enter after reaching destination and bought the good.')
+            input("*****DON'T FORGET TO LOAD YOUR CARGO!!!*****")
+            setDestination(tradePairs[idx]['to_id'])
+            del tradePairs[idx]
+            pass
+        pass
+    elif command.lower() in list(commandDict.keys()):
+        sortField = commandDict[command.lower()]
+        reverse = command.islower()
         pass
     pass
 
