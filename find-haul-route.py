@@ -298,7 +298,6 @@ Capitalize ('P', 'M', 'J') to sort ascending.
             input('Hit enter after reaching destination and bought the good.')
             input("*****DON'T FORGET TO LOAD YOUR CARGO!!!*****")
             setDestination(tradePairs[idx]['to_id'])
-            del tradePairs[idx]
             pass
         pass
     elif command.lower() in list(commandDict.keys()):
