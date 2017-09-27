@@ -110,6 +110,23 @@ def getRoute(src, dst):
     else:
         return list(reversed(route))
 
+def tradePairInfoStr(pair):
+    return '\n'.join([ 'Item: \t\t{item_name}',
+                        'Profit: \t{profit:,.2f} ISK',
+                        'Margin: \t{margin:.2%}/{margin_actual:.2%}',
+                        'Volume: \t{volume}',
+                        'Cost: \t\t{cost:,.2f} ISK',
+                        'Min. volume: \t{min_volume}',
+                        'Min. cost: \t{min_cost:,.2f} ISK',
+                        'Item size: \t{item_size:.2f} m3',
+                        'Total size: \t{total_size:.2f} m3',
+                        'From: \t\t{from_sec:.2f} {from_name}',
+                        'To: \t\t{to_sec:.2f} {to_name}',
+                        'Jumps: \t\t{jumps}',
+                        'Profit/jump: \t{profit_per_jump:,.2f} ISK',
+                        'Profit limit factor: {profit_limit_factor}.'
+                    ]).format_map(pair)
+
 tradePairs = []
 for typeId in orders:
 #     if len(orders[typeId][sell]) == 0:
@@ -202,29 +219,30 @@ for typeId in orders:
                 print(errorMessage.args[0])
                 continue
             legitPair = dict([
+                ('type_id', int(typeId)),
+                ('item_name', items.get(typeId)['name']),
                 ('volume', availVolume),
                 ('min_volume', minVolume),
+                ('min_cost', minCost),
+                ('item_size', itemVolume),
+                ('total_size', itemVolume * availVolume),
+                ('from_id', locSell), ('from_sec', secSell),
+                ('from_name', getOrderLocationName(locSell)),
+                ('to_id', locBuy), ('to_sec', secBuy),
+                ('to_name', getOrderLocationName(locBuy)),
+                ('cost', buyTotal),
                 ('profit', profit),
                 ('margin', margin),
                 ('margin_actual', marginActual),
                 ('jumps', jumps),
-                ('buy', buyOrdersList),
-                ('sell', sellOrdersList)
+                ('profit_per_jump', profit / jumps),
+                ('buy_orders', buyOrdersList),
+                ('sell_orders', sellOrdersList),
+                ('profit_limit_factor', profitLimFactor)
                 ])
             tradePairs.append(legitPair)
             with open('./result.txt', 'a') as outputText:
-                outputText.write('Item: \t\t{} {} \nProfit: \t{:,.2f} ISK \nMargin: \t{:.2%}/{:.2%} \n'.
-                        format(typeId, items.get(typeId)['name'], profit, margin, marginActual) + 
-                        'Volume: \t{} \nCost: \t\t{:,.2f} ISK \n'.format(availVolume, sellTotal) + 
-                        'Min. volume: \t{} \n'.format(minVolume) +
-                        'Min. cost: \t{:,.2f} ISK \n'.format(minCost) +
-                        'Item size: \t{:.2f} m3 \n'.format(itemVolume) +
-                        'Total size: \t{:.2f} m3 \n'.format(itemVolume * availVolume) +
-                        'From: \t\t{} {:.2f} {} \n'.format(locSell, secSell, getOrderLocationName(locSell)) + 
-                        'To: \t\t{} {:.2f} {} \n'.format(locBuy, secBuy, getOrderLocationName(locBuy)) + 
-                        'Jumps: \t\t{} \n'.format(jumps) + 
-                        'Profit/jump: \t{:,.2f} ISK \n'.format(profit / jumps) + 
-                        'Profit limit factor: {}.\n'.format(profitLimFactor) + '\n')
+                outputText.write(tradePairInfoStr(legitPair) + '\n\n')
                 pass
             pass
         pass
