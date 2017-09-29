@@ -5,13 +5,13 @@ import localcache
 import requests
 from esiauth import authedClient
 
-cargoVolumeLim = 640
-budgetLim = 165e6
-highsecRoute = False
-minSecSta = 0
+cargoVolumeLim = 7000
+budgetLim = 100e6 
+highsecRoute = True
+minSecSta = 0.5
 maxSecSta = 1
-minMargin = 0.2
-minProfit = 10e6
+minMargin = 0.1
+minProfit = 5e6
 
 name = 'name'
 price = 'price'
@@ -135,13 +135,14 @@ def openMarketDetail(typeId):
     client.post('''https://esi.tech.ccp.is/latest\
 /ui/openwindow/marketdetails/?datasource=tranquility&type_id=''' + str(typeId))
 
-chaOnline = client.get('https://esi.tech.ccp.is/latest/characters/' + str(chaID) + '/online/?datasource=tranquility').json()
-if chaOnline:
-    print('Character online. triangulating...')
-    locCurr = client.get('https://esi.tech.ccp.is/latest/characters/' + str(chaID) + '/location/?datasource=tranquility').json()['solar_system_id']
-    print('Character found in system {}.'.format(systems.get(locCurr)['name']))
-else:
-    locCurr = None
+# chaOnline = client.get('https://esi.tech.ccp.is/latest/characters/' + str(chaID) + '/online/?datasource=tranquility').json()
+# if chaOnline:
+#     print('Character online. triangulating...')
+#     locCurr = client.get('https://esi.tech.ccp.is/latest/characters/' + str(chaID) + '/location/?datasource=tranquility').json()['solar_system_id']
+#     print('Character found in system {}.'.format(systems.get(locCurr)['name']))
+# else:
+#     locCurr = None
+locCurr = 30002510
 
 tradePairs = []
 for typeId in orders:
@@ -252,7 +253,7 @@ for typeId in orders:
                 ('from_name', getOrderLocationName(locSell)),
                 ('to_id', locBuy), ('to_sec', secBuy),
                 ('to_name', getOrderLocationName(locBuy)),
-                ('cost', buyTotal),
+                ('cost', sellTotal),
                 ('profit', profit),
                 ('margin', margin),
                 ('margin_actual', marginActual),
