@@ -6,7 +6,7 @@ import requests
 from esiauth import authedClient
 
 cargoVolumeLim = 7000
-budgetLim = 100e6 
+budgetLim = 100e6
 highsecRoute = True
 minSecSta = 0.5
 maxSecSta = 1
@@ -33,10 +33,10 @@ chaID = client.getCharacterID()
 print('Getting structure list...')
 structList = requests.get('https://esi.tech.ccp.is/latest/universe/structures/?datasource=tranquility').json()
 
-items = localcache.Cache('item', 
+items = localcache.Cache('item',
         'https://esi.tech.ccp.is/latest/universe/types/',
         '/?datasource=tranquility&language=en-us')
-systems = localcache.Cache('system', 
+systems = localcache.Cache('system',
         'https://esi.tech.ccp.is/latest/universe/systems/',
         '/?datasource=tranquility&language=en-us')
 stations = localcache.Cache('station',
@@ -135,23 +135,23 @@ def openMarketDetail(typeId):
     client.post('''https://esi.tech.ccp.is/latest\
 /ui/openwindow/marketdetails/?datasource=tranquility&type_id=''' + str(typeId))
 
-# chaOnline = client.get('https://esi.tech.ccp.is/latest/characters/' + str(chaID) + '/online/?datasource=tranquility').json()
-# if chaOnline:
-#     print('Character online. triangulating...')
-#     locCurr = client.get('https://esi.tech.ccp.is/latest/characters/' + str(chaID) + '/location/?datasource=tranquility').json()['solar_system_id']
-#     print('Character found in system {}.'.format(systems.get(locCurr)['name']))
-# else:
-#     locCurr = None
-locCurr = 30002510
+chaOnline = client.get('https://esi.tech.ccp.is/latest/characters/' + str(chaID) + '/online/?datasource=tranquility').json()
+if chaOnline:
+    print('Character online. triangulating...')
+    locCurr = client.get('https://esi.tech.ccp.is/latest/characters/' + str(chaID) + '/location/?datasource=tranquility').json()['solar_system_id']
+    print('Character found in system {}.'.format(systems.get(locCurr)['name']))
+else:
+    locCurr = None
+# locCurr = 30002510 # Jita
 
 tradePairs = []
 for typeId in orders:
 #     if len(orders[typeId][sell]) == 0:
 #         continue
-# 
+#
 #     if len(orders[typeId][buy]) == 0:
 #         continue
-# 
+#
     if orders[typeId]['lowest_sell'] > orders[typeId]['highest_buy']:
         continue
 
