@@ -30,14 +30,13 @@ class Cache:
             pass
 
     def get(self, ID):
-        ID = str(ID)
         if self.data.get(ID) == []:
             raise Exception('{} {} previously not found on server.'.
                     format(self.name.capitalize(), ID))
         if self.data.get(ID) == None:
             print('{} {} not found in local cache, retriving from server...'.
                     format(self.name.capitalize(), ID))
-            req = self.getMethod(self.prefix + ID + self.suffix)
+            req = self.getMethod(self.prefix + str(ID) + self.suffix)
             if req.status_code != 200:
                 self.data[ID] = []
                 self.save()
