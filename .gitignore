@@ -109,3 +109,6 @@ cache/
 
 # Secrets
 secret*
+
+# Large or volatile databases
+db/
