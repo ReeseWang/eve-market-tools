@@ -137,13 +137,9 @@ def openMarketDetail(typeId):
 /ui/openwindow/marketdetails/?datasource=tranquility&type_id=''' + str(typeId))
     pass
 
-chaOnline = client.get('https://esi.tech.ccp.is/latest/characters/' + str(chaID) + '/online/?datasource=tranquility').json()
-if chaOnline:
-    print('Character online. triangulating...')
-    locCurr = client.get('https://esi.tech.ccp.is/latest/characters/' + str(chaID) + '/location/?datasource=tranquility').json()['solar_system_id']
-    print('Character found in system {}.'.format(systems.get(locCurr)['name']))
-else:
-    locCurr = None
+print('Locating')
+locCurr = client.get('https://esi.tech.ccp.is/latest/characters/' + str(chaID) + '/location/?datasource=tranquility').json()['solar_system_id']
+print('Character found in system {}.'.format(systems.get(locCurr)['name']))
 # locCurr = 30002510 # Jita
 
 tradePairs = []
