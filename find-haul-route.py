@@ -81,7 +81,10 @@ def totalISK(ordersList, volume):
     volumeRemain = volume
     for order in ordersList:
         if order['volume_remain'] > volumeRemain:
-            amount += (volumeRemain * order['price'])
+            if order['is_buy_order'] and ( order['min_volume'] > volumeRemain ):
+                pass
+            else:
+                amount += (volumeRemain * order['price'])
             # print('{:,.2f} ISK, \t{}({})'.format(order['price'], volumeRemain, order['volume_remain']))
             break
         else:
