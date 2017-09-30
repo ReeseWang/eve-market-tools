@@ -5,13 +5,14 @@ import localcache
 import requests
 from esiauth import authedClient
 
-cargoVolumeLim = 7000
-budgetLim = 100e6
+cargoVolumeLim = 20000
+budgetLim = 1e9
 highsecRoute = True
 minSecSta = 0.5
 maxSecSta = 1
 minMargin = 0.1
 minProfit = 5e6
+taxRate = 1 - 0.02
 
 name = 'name'
 price = 'price'
@@ -134,6 +135,7 @@ datasource=tranquility&destination_id=''' + str(dest))
 def openMarketDetail(typeId):
     client.post('''https://esi.tech.ccp.is/latest\
 /ui/openwindow/marketdetails/?datasource=tranquility&type_id=''' + str(typeId))
+    pass
 
 chaOnline = client.get('https://esi.tech.ccp.is/latest/characters/' + str(chaID) + '/online/?datasource=tranquility').json()
 if chaOnline:
@@ -168,8 +170,8 @@ for typeId in orders:
             availVolume = min(totalVolume(sellOrdersList), totalVolume(buyOrdersList))
             sellTotal = totalISK(sellOrdersList, availVolume)
             buyTotal = totalISK(buyOrdersList, availVolume)
-            profit = buyTotal - sellTotal
-            margin = buyOrdersList[0][price] / sellOrdersList[0][price] - 1
+            profit = buyTotal * taxRate - sellTotal
+            margin = buyOrdersList[0][price] * taxRate / sellOrdersList[0][price] - 1
             if margin < minMargin:
                 # print('Margin = {:.2%} < {:.2%}, too low.'.format(margin, minMargin))
                 continue
@@ -197,7 +199,7 @@ for typeId in orders:
                         # Now that volume is recalculated.
                         sellTotal = totalISK(sellOrdersList, availVolume)
                         buyTotal = totalISK(buyOrdersList, availVolume)
-                        profit = buyTotal - sellTotal
+                        profit = taxRate * buyTotal - sellTotal
                     pass
                 if budgetLim != 0:
                     if totalISK(buyOrdersList, availVolume) > budgetLim:
@@ -208,7 +210,7 @@ for typeId in orders:
                             pass
                         sellTotal = totalISK(sellOrdersList, availVolume)
                         buyTotal = totalISK(buyOrdersList, availVolume)
-                        profit = buyTotal - sellTotal
+                        profit = taxRate * buyTotal - sellTotal
                         pass
                     pass
 
@@ -217,7 +219,7 @@ for typeId in orders:
                     # print('Profit = {:,.2f} ISK < {:,.2f} ISK, too low.'.format(profit, minProfit))
                     continue
                 # Actual margin, can only be lower.
-                marginActual = buyTotal / sellTotal - 1
+                marginActual = taxRate * buyTotal / sellTotal - 1
                 sysBuy = getOrderSolarSystem(locBuy)
                 secBuy = sysBuy[security]
                 if not ( minSecSta < secBuy < maxSecSta ):
