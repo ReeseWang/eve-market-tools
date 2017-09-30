@@ -235,6 +235,11 @@ for typeId in orders:
                     if jumpsCurr == -1:
                         continue
                     jumps += jumpsCurr
+                    pass
+                if jumps == 0:
+                    ppj = profit
+                else:
+                    ppj = profit / jumps
                 pass
             except Exception as errorMessage:
                 print(errorMessage.args[0])
@@ -256,7 +261,7 @@ for typeId in orders:
                 ('margin', margin),
                 ('margin_actual', marginActual),
                 ('jumps', jumps),
-                ('profit_per_jump', profit / jumps),
+                ('profit_per_jump', ppj),
                 ('buy_orders', buyOrdersList),
                 ('sell_orders', sellOrdersList),
                 ('profit_limit_factor', profitLimFactor)
