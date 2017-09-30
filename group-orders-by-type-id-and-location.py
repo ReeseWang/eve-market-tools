@@ -1,7 +1,5 @@
 #!/usr/bin/env python3
 
-import json
-import requests
 import pickle
 import math
 
@@ -13,11 +11,12 @@ with open('./cache/ordersAll.bin', 'rb') as input:
 
 ordersTypeId = dict()
 for regionId in orders:
+    print(regionId)
     for order in orders[regionId]:
         typeId = str(order['type_id'])
-        if ordersTypeId.get(typeId) == None:
+        if ordersTypeId.get(typeId) is None:
             ordersTypeId[typeId] = dict([
-                ('buy', dict()), 
+                ('buy', dict()),
                 ('sell', dict()),
                 ('highest_buy', 0),
                 ('lowest_sell', math.inf)])
@@ -27,14 +26,14 @@ for regionId in orders:
         if order['is_buy_order']:
             if ordersTypeId[typeId]['highest_buy'] < order['price']:
                 ordersTypeId[typeId]['highest_buy'] = order['price']
-            if ordersTypeId[typeId]['buy'].get(locationId) == None:
+            if ordersTypeId[typeId]['buy'].get(locationId) is None:
                 ordersTypeId[typeId]['buy'][locationId] = []
             ordersTypeId[typeId]['buy'][locationId].append(order)
             pass
         else:
             if ordersTypeId[typeId]['lowest_sell'] > order['price']:
                 ordersTypeId[typeId]['lowest_sell'] = order['price']
-            if ordersTypeId[typeId]['sell'].get(locationId) == None:
+            if ordersTypeId[typeId]['sell'].get(locationId) is None:
                 ordersTypeId[typeId]['sell'][locationId] = []
             ordersTypeId[typeId]['sell'][locationId].append(order)
             pass
@@ -43,12 +42,14 @@ for regionId in orders:
 
 for typeId in ordersTypeId:
     for locationId in ordersTypeId[typeId]['buy']:
-        ordersTypeId[typeId]['buy'][locationId].sort(key=lambda order: order['price'], \
-                reverse=True)
+        ordersTypeId[typeId]['buy'][locationId].\
+            sort(key=lambda order: order['price'],
+                 reverse=True)
         pass
     for locationId in ordersTypeId[typeId]['sell']:
-        ordersTypeId[typeId]['sell'][locationId].sort(key=lambda order: order['price'], \
-                reverse=False)
+        ordersTypeId[typeId]['sell'][locationId].\
+            sort(key=lambda order: order['price'],
+                 reverse=False)
         pass
     pass
 

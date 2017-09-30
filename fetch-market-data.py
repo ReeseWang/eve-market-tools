@@ -1,37 +1,47 @@
 #!/usr/bin/env python3
 
-import json
 import requests
 import pickle
 import os
+from concurrent.futures import ThreadPoolExecutor
+
+
+def getOrdersRegion(ordersList, reg):
+    print('Getting orders in region {}...'.format(reg))
+    page = 1
+    while True:
+        req = requests.get('https://esi.tech.ccp.is/latest/markets/' +
+                           str(reg) + '/orders/?datasource=tranquility' +
+                           '&order_type=all&page=' + str(page))
+        assert req.status_code == 200
+        ordersList.extend(req.json())
+        print('Region {} Page {} received.'.format(reg, page))
+        pageCount = int(req.headers['x-pages'])
+        page += 1
+        if page > pageCount:
+            break
+        pass
+
+    print('Region {} has {} orders'.format(reg, len(ordersList)))
+    pass
+
 
 print('Getting region list...')
-req = requests.get('https://esi.tech.ccp.is/latest/universe/regions/?datasource=tranquility')
+req = requests.get('https://esi.tech.ccp.is/\
+latest/universe/regions/?datasource=tranquility')
 assert req.status_code == 200
-regions = req.json()
+regionsInt = req.json()
 
-orders = dict()
-for reg in regions:
-    print('Getting orders in region {}...'.format(reg))
-    req = requests.get('https://esi.tech.ccp.is/latest/markets/' + \
-            str(reg) + '/orders/?datasource=tranquility&order_type=all&page=1')
-    assert req.status_code == 200
-    orders[str(reg)] = req.json()
-    print('Page 1 received.')
-    
-    pages = int(req.headers['x-pages'])
-    if pages > 1:
-        for page in range(2, pages + 1):
-            req = requests.get('https://esi.tech.ccp.is/latest/markets/' + \
-                    str(reg) + '/orders/?datasource=tranquility' + \
-                    '&order_type=all&page=' + str(page))
-            assert req.status_code == 200
-            orders[str(reg)].extend(req.json())
-            print('Page {} received.'.format(page))
-            pass
-        pass
-    print('Region {} has {} orders'.format(reg, len(orders[str(reg)])))
+regionsStr = []
+for reg in regionsInt:
+    regionsStr.append(str(reg))
     pass
+
+orders = dict.fromkeys(regionsStr, [])
+with ThreadPoolExecutor(max_workers=10) as executor:
+    for reg in regionsStr:
+        executor.submit(getOrdersRegion, orders[reg], reg)
+        pass
 
 if not os.path.isdir('./cache/'):
     os.makedirs('./cache/')
@@ -42,5 +52,3 @@ with open('cache/ordersAll.bin', 'wb') as output:
     pickle.dump(orders, output, pickle.HIGHEST_PROTOCOL)
     print('Completed.')
     pass
-
-
