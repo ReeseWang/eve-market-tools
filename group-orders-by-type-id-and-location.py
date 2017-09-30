@@ -27,15 +27,17 @@ for regionId in orders:
             if ordersTypeId[typeId]['highest_buy'] < order['price']:
                 ordersTypeId[typeId]['highest_buy'] = order['price']
             if ordersTypeId[typeId]['buy'].get(locationId) is None:
-                ordersTypeId[typeId]['buy'][locationId] = []
-            ordersTypeId[typeId]['buy'][locationId].append(order)
+                ordersTypeId[typeId]['buy'][locationId] = [order]
+            else:
+                ordersTypeId[typeId]['buy'][locationId].append(order)
             pass
         else:
             if ordersTypeId[typeId]['lowest_sell'] > order['price']:
                 ordersTypeId[typeId]['lowest_sell'] = order['price']
             if ordersTypeId[typeId]['sell'].get(locationId) is None:
-                ordersTypeId[typeId]['sell'][locationId] = []
-            ordersTypeId[typeId]['sell'][locationId].append(order)
+                ordersTypeId[typeId]['sell'][locationId] = [order]
+            else:
+                ordersTypeId[typeId]['sell'][locationId].append(order)
             pass
         pass
     pass
