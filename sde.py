@@ -21,8 +21,9 @@ def _get(id, idcol, table, cols):
     assert isinstance(cols, str)
     assert isinstance(table, str)
     c = _conn.cursor()
-    c.execute("SELECT {} FROM {}"
+    c.execute("SELECT {} FROM {} "
               "WHERE {}=?".format(cols, table, idcol), (id,))
+    assert c.arraysize == 1
     return c.fetchone()
 
 
@@ -32,7 +33,7 @@ def _gethdd(id, idcol, table, cols):
     assert isinstance(cols, str)
     assert isinstance(table, str)
     c = _conn.cursor()
-    c.execute("SELECT {} FROM hdd.{}"
+    c.execute("SELECT {} FROM hdd.{} "
               "WHERE {}=?".format(cols, table, idcol), (id,))
     return c.fetchone()
 
@@ -111,10 +112,23 @@ def getItemName(itemID):
                 cols='itemName')[0]
 
 
+def _getSolarSystem(solarSystemID, cols):
+    return _get(solarSystemID,
+                idcol='solarSystemID',
+                table='mapSolarSystems',
+                cols=cols)
+
+
+def getSolarSystemSecurity(solarSystemID):
+    return _getSolarSystem(solarSystemID,
+                           cols='security')[0]
+
+
 _conn = sqlite3.connect(':memory:')
 _conn.execute("ATTACH './db/sde.sqlite' AS hdd;")
 
 cacheTableToMemory('invTypes')
 cacheTableToMemory('invNames')
 cacheTableToMemory('staStations')
+cacheTableToMemory('mapSolarSystems')
 typesPackVol = _cacheItemsPackVols()

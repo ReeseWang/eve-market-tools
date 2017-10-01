@@ -4,6 +4,7 @@ import pickle
 import localcache
 import requests
 from esiauth import authedClient
+import sde
 
 cargoVolumeLim = 20000
 budgetLim = 1e9
@@ -36,18 +37,18 @@ structList = requests.get('https://esi.tech.ccp.is/'
                           'latest/universe/structures/?'
                           'datasource=tranquility').json()
 
-items = localcache.\
-    Cache('item',
-          'https://esi.tech.ccp.is/latest/universe/types/',
-          '/?datasource=tranquility&language=en-us')
-systems = localcache.\
-    Cache('system',
-          'https://esi.tech.ccp.is/latest/universe/systems/',
-          '/?datasource=tranquility&language=en-us')
-stations = localcache.\
-    Cache('station',
-          'https://esi.tech.ccp.is/latest/universe/stations/',
-          '/?datasource=tranquility')
+# items = localcache.\
+#     Cache('item',
+#           'https://esi.tech.ccp.is/latest/universe/types/',
+#           '/?datasource=tranquility&language=en-us')
+# systems = localcache.\
+#     Cache('system',
+#           'https://esi.tech.ccp.is/latest/universe/systems/',
+#           '/?datasource=tranquility&language=en-us')
+# stations = localcache.\
+#     Cache('station',
+#           'https://esi.tech.ccp.is/latest/universe/stations/',
+#           '/?datasource=tranquility')
 if highsecRoute:
     routes = localcache.\
         Cache('routehigh',
@@ -65,17 +66,31 @@ structures = localcache.\
 
 
 def getOrderSolarSystem(location):
-    if int(location) in structList:
-        return systems.get(structures.get(location)['solar_system_id'])
+    if int(location) > 1000000000000: # Player structure?
+        if int(location) in structList:
+            return structures.get(location)['solar_system_id']
+        else:
+            return None
     else:
-        return systems.get(stations.get(location)['system_id'])
+        return sde.getStationSolarSystem(int(location))
+
+
+def getOrderSecurity(location):
+    if int(location) > 1000000000000: # Player structure?
+        if int(location) in structList:
+            return sde.getSolarSystemSecurity(
+                int(structures.get(location)['solar_system_id']))
+        else:
+            return None
+    else:
+        return sde.getStationSecurity(int(location))
 
 
 def getOrderLocationName(location):
     if int(location) in structList:
         return structures.get(location)['name']
     else:
-        return stations.get(location)['name']
+        return sde.getItemName(int(location))
 
 
 def totalVolume(ordersList):
@@ -164,7 +179,7 @@ locCurr = client.get('https://esi.tech.ccp.is/latest/characters/' +
                      str(chaID) +
                      '/location/?datasource=tranquility'
                      ).json()['solar_system_id']
-print('Character found in system {}.'.format(systems.get(locCurr)['name']))
+print('Character found in system {}.'.format(sde.getItemName(int(locCurr))))
 # locCurr = 30002510 # Jita
 
 tradePairs = []
@@ -214,7 +229,7 @@ for typeId in orders:
                 continue
             try:
                 if cargoVolumeLim != 0:
-                    itemVolume = items.get(typeId)['volume']
+                    itemVolume = sde.getTypeVolume(int(typeId))
                     if itemVolume > cargoVolumeLim:
                         # print('Item volume = /
                         #       '{}m3 > {}m3, too big.'.format(itemVolume,
@@ -248,25 +263,25 @@ for typeId in orders:
                     continue
                 # Actual margin, can only be lower.
                 marginActual = taxRate * buyTotal / sellTotal - 1
-                sysBuy = getOrderSolarSystem(locBuy)
-                secBuy = sysBuy[security]
+                # sysBuy = getOrderSolarSystem(locBuy)
+                secBuy = getOrderSecurity(locBuy)
                 if not (minSecSta < secBuy < maxSecSta):
                     # print('Buyer location security status '
                     #       'does not meet requirements.')
                     continue
-                sysSell = getOrderSolarSystem(locSell)
-                secSell = sysSell[security]
+                # sysSell = getOrderSolarSystem(locSell)
+                secSell = getOrderSecurity(locSell)
                 if not (minSecSta < secSell < maxSecSta):
                     # print('Seller location security status '
                     #       'does not meet requirements.')
                     continue
-                jumps = len(getRoute(sysSell['system_id'],
-                                     sysBuy['system_id'])) - 1
+                jumps = len(getRoute(getOrderSolarSystem(locSell),
+                                     getOrderSolarSystem(locBuy))) - 1
                 if jumps == -1:
                     continue
                 if locCurr is not None:
                     # Take jumps from current location into consideration
-                    jumpsCurr = len(getRoute(locCurr, sysSell['system_id'])) - 1
+                    jumpsCurr = len(getRoute(locCurr, getOrderSolarSystem(locSell))) - 1
                     if jumpsCurr == -1:
                         continue
                     jumps += jumpsCurr
@@ -281,7 +296,7 @@ for typeId in orders:
                 continue
             legitPair = dict([
                 ('type_id', int(typeId)),
-                ('item_name', items.get(typeId)['name']),
+                ('item_name', sde.getTypeName(int(typeId))),
                 ('volume', availVolume),
                 ('min_volume', minVolume),
                 ('min_cost', minCost),
