@@ -32,28 +32,37 @@ with open('./cache/ordersAllTypeIdSorted.bin', 'rb') as inputFile:
 client = authedClient()
 chaID = client.getCharacterID()
 print('Getting structure list...')
-structList = requests.get('https://esi.tech.ccp.is/latest/universe/structures/?datasource=tranquility').json()
+structList = requests.get('https://esi.tech.ccp.is/'
+                          'latest/universe/structures/?'
+                          'datasource=tranquility').json()
 
-items = localcache.Cache('item',
-        'https://esi.tech.ccp.is/latest/universe/types/',
-        '/?datasource=tranquility&language=en-us')
-systems = localcache.Cache('system',
-        'https://esi.tech.ccp.is/latest/universe/systems/',
-        '/?datasource=tranquility&language=en-us')
-stations = localcache.Cache('station',
-        'https://esi.tech.ccp.is/latest/universe/stations/',
-        '/?datasource=tranquility')
+items = localcache.\
+    Cache('item',
+          'https://esi.tech.ccp.is/latest/universe/types/',
+          '/?datasource=tranquility&language=en-us')
+systems = localcache.\
+    Cache('system',
+          'https://esi.tech.ccp.is/latest/universe/systems/',
+          '/?datasource=tranquility&language=en-us')
+stations = localcache.\
+    Cache('station',
+          'https://esi.tech.ccp.is/latest/universe/stations/',
+          '/?datasource=tranquility')
 if highsecRoute:
-    routes = localcache.Cache('routehigh',
-            'https://esi.tech.ccp.is/latest/route/',
-            '/?datasource=tranquility&flag=secure')
+    routes = localcache.\
+        Cache('routehigh',
+              'https://esi.tech.ccp.is/latest/route/',
+              '/?datasource=tranquility&flag=secure')
 else:
-    routes = localcache.Cache('route',
-            'https://esi.tech.ccp.is/latest/route/',
-            '/?datasource=tranquility&flag=shortest')
-structures = localcache.Cache('structure',
-        'https://esi.tech.ccp.is/latest/universe/structures/',
-        '/?datasource=tranquility', getMethod = client.get)
+    routes = localcache.\
+        Cache('route',
+              'https://esi.tech.ccp.is/latest/route/',
+              '/?datasource=tranquility&flag=shortest')
+structures = localcache.\
+    Cache('structure',
+          'https://esi.tech.ccp.is/latest/universe/structures/',
+          '/?datasource=tranquility', getMethod=client.get)
+
 
 def getOrderSolarSystem(location):
     if int(location) in structList:
@@ -61,11 +70,13 @@ def getOrderSolarSystem(location):
     else:
         return systems.get(stations.get(location)['system_id'])
 
+
 def getOrderLocationName(location):
     if int(location) in structList:
         return structures.get(location)['name']
     else:
         return stations.get(location)['name']
+
 
 def totalVolume(ordersList):
     volume = 0
@@ -74,6 +85,7 @@ def totalVolume(ordersList):
         pass
     return volume
 
+
 def totalISK(ordersList, volume):
     assert volume <= totalVolume(ordersList)
     # print('Calculating total amount... Volume: {}'.format(volume))
@@ -81,20 +93,23 @@ def totalISK(ordersList, volume):
     volumeRemain = volume
     for order in ordersList:
         if order['volume_remain'] > volumeRemain:
-            if order['is_buy_order'] and ( order['min_volume'] > volumeRemain ):
+            if order['is_buy_order'] and (order['min_volume'] > volumeRemain):
                 pass
             else:
                 amount += (volumeRemain * order['price'])
-            # print('{:,.2f} ISK, \t{}({})'.format(order['price'], volumeRemain, order['volume_remain']))
+            # print('{:,.2f} ISK, \t{}({})'.\
+            #     format(order['price'], volumeRemain, order['volume_remain']))
             break
         else:
             amount += (order['volume_remain'] * order['price'])
             volumeRemain -= order['volume_remain']
-            # print('{:,.2f} ISK, \t{}'.format(order['price'], order['volume_remain']))
+            # print('{:,.2f} ISK, \t{}'.\
+            #     format(order['price'], order['volume_remain']))
             pass
         pass
     # print('Total amount: {:,.2f} ISK.'.format(amount))
     return amount
+
 
 def getRoute(src, dst):
     if src == dst:
@@ -114,20 +129,22 @@ def getRoute(src, dst):
     else:
         return list(reversed(route))
 
+
 def tradePairInfoStr(pair):
-    return '\n'.join([ 'Item: \t\t{item_name}',
-                        'Profit: \t{profit:,.2f} ISK',
-                        'Volume: \t{volume}',
-                        'Cost: \t\t{cost:,.2f} ISK',
-                        'Min. volume: \t{min_volume}',
-                        'Min. cost: \t{min_cost:,.2f} ISK',
-                        'Total size: \t{total_size:.2f} m3',
-                        'From: \t\t{from_sec:.2f} {from_name}',
-                        'To: \t\t{to_sec:.2f} {to_name}',
-                        'Jumps: \t\t{jumps}',
-                        'Profit/jump: \t{profit_per_jump:,.2f} ISK',
-                        'Profit limit factor: {profit_limit_factor}.'
-                    ]).format_map(pair)
+    return '\n'.join(['Item: \t\t{item_name}',
+                      'Profit: \t{profit:,.2f} ISK',
+                      'Volume: \t{volume}',
+                      'Cost: \t\t{cost:,.2f} ISK',
+                      'Min. volume: \t{min_volume}',
+                      'Min. cost: \t{min_cost:,.2f} ISK',
+                      'Total size: \t{total_size:.2f} m3',
+                      'From: \t\t{from_sec:.2f} {from_name}',
+                      'To: \t\t{to_sec:.2f} {to_name}',
+                      'Jumps: \t\t{jumps}',
+                      'Profit/jump: \t{profit_per_jump:,.2f} ISK',
+                      'Profit limit factor: {profit_limit_factor}.'
+                      ]).format_map(pair)
+
 
 def setDestination(dest):
     client.post('''https://esi.tech.ccp.is/latest\
@@ -135,24 +152,29 @@ def setDestination(dest):
 datasource=tranquility&destination_id=''' + str(dest))
     pass
 
+
 def openMarketDetail(typeId):
     client.post('''https://esi.tech.ccp.is/latest\
 /ui/openwindow/marketdetails/?datasource=tranquility&type_id=''' + str(typeId))
     pass
 
+
 print('Locating')
-locCurr = client.get('https://esi.tech.ccp.is/latest/characters/' + str(chaID) + '/location/?datasource=tranquility').json()['solar_system_id']
+locCurr = client.get('https://esi.tech.ccp.is/latest/characters/' +
+                     str(chaID) +
+                     '/location/?datasource=tranquility'
+                     ).json()['solar_system_id']
 print('Character found in system {}.'.format(systems.get(locCurr)['name']))
 # locCurr = 30002510 # Jita
 
 tradePairs = []
 for typeId in orders:
-#     if len(orders[typeId][sell]) == 0:
-#         continue
-#
-#     if len(orders[typeId][buy]) == 0:
-#         continue
-#
+    # if len(orders[typeId][sell]) == 0:
+    #     continue
+    #
+    # if len(orders[typeId][buy]) == 0:
+    #     continue
+    #
     if orders[typeId]['lowest_sell'] > orders[typeId]['highest_buy']:
         continue
 
@@ -160,22 +182,26 @@ for typeId in orders:
         for locBuy in orders[typeId][buy]:
             sellOrdersList = orders[typeId][sell][locSell]
             buyOrdersList = orders[typeId][buy][locBuy]
-            if ( len(sellOrdersList) == 0 ) or ( len(buyOrdersList) == 0 ):
+            if (len(sellOrdersList) == 0) or (len(buyOrdersList) == 0):
                 continue
             if sellOrdersList[0][price] > buyOrdersList[0][price]:
                 continue
             profitLimFactor = 'Market'
 
-            availVolume = min(totalVolume(sellOrdersList), totalVolume(buyOrdersList))
+            availVolume = min(totalVolume(sellOrdersList),
+                              totalVolume(buyOrdersList))
             sellTotal = totalISK(sellOrdersList, availVolume)
             buyTotal = totalISK(buyOrdersList, availVolume)
             profit = buyTotal * taxRate - sellTotal
-            margin = buyOrdersList[0][price] * taxRate / sellOrdersList[0][price] - 1
+            margin = buyOrdersList[0][price] * taxRate / \
+                sellOrdersList[0][price] - 1
             if margin < minMargin:
-                # print('Margin = {:.2%} < {:.2%}, too low.'.format(margin, minMargin))
+                # print('Margin = {:.2%} < {:.2%}, '
+                #       'too low.'.format(margin, minMargin))
                 continue
             if profit < minProfit:
-                # print('Profit = {:,.2f} ISK < {:,.2f} ISK, too low.'.format(profit, minProfit))
+                # print('Profit = {:,.2f} ISK < {:,.2f} ISK, '
+                #       'too low.'.format(profit, minProfit))
                 continue
             buyerMinVolumes = [order['min_volume'] for order in buyOrdersList]
             minVolume = min(buyerMinVolumes)
@@ -190,7 +216,9 @@ for typeId in orders:
                 if cargoVolumeLim != 0:
                     itemVolume = items.get(typeId)['volume']
                     if itemVolume > cargoVolumeLim:
-                        # print('Item volume = {}m3 > {}m3, too big.'.format(itemVolume, cargoVolumeLim))
+                        # print('Item volume = /
+                        #       '{}m3 > {}m3, too big.'.format(itemVolume,
+                        #                                      cargoVolumeLim))
                         continue
                     if availVolume > (cargoVolumeLim // itemVolume):
                         profitLimFactor = 'Cargo space'
@@ -215,21 +243,25 @@ for typeId in orders:
 
                 # Check updated profit
                 if profit < minProfit:
-                    # print('Profit = {:,.2f} ISK < {:,.2f} ISK, too low.'.format(profit, minProfit))
+                    # print('Profit = {:,.2f} ISK < '
+                    #       '{:,.2f} ISK, too low.'.format(profit, minProfit))
                     continue
                 # Actual margin, can only be lower.
                 marginActual = taxRate * buyTotal / sellTotal - 1
                 sysBuy = getOrderSolarSystem(locBuy)
                 secBuy = sysBuy[security]
-                if not ( minSecSta < secBuy < maxSecSta ):
-                    # print('Buyer location security status does not meet requirements.')
+                if not (minSecSta < secBuy < maxSecSta):
+                    # print('Buyer location security status '
+                    #       'does not meet requirements.')
                     continue
                 sysSell = getOrderSolarSystem(locSell)
                 secSell = sysSell[security]
-                if not ( minSecSta < secSell < maxSecSta ):
-                    # print('Seller location security status does not meet requirements.')
+                if not (minSecSta < secSell < maxSecSta):
+                    # print('Seller location security status '
+                    #       'does not meet requirements.')
                     continue
-                jumps = len(getRoute(sysSell['system_id'], sysBuy['system_id'])) - 1
+                jumps = len(getRoute(sysSell['system_id'],
+                                     sysBuy['system_id'])) - 1
                 if jumps == -1:
                     continue
                 if locCurr is not None:
@@ -280,7 +312,8 @@ for typeId in orders:
 command = 'dummy'
 sortField = 'profit'
 reverse = True
-commandDict = { 'p': 'profit', 'm': 'margin', 'j': 'jumps' , 'u': 'profit_per_jump'}
+commandDict = {'p': 'profit', 'm': 'margin',
+               'j': 'jumps', 'u': 'profit_per_jump'}
 while command.lower() != 'exit':
     tradePairs.sort(key=lambda pair: pair[sortField], reverse=reverse)
     for i in range(0, 3):
@@ -316,4 +349,3 @@ with open('./cache/tradePairs.bin', 'wb') as output:
     pickle.dump(tradePairs, output, pickle.HIGHEST_PROTOCOL)
     print('Completed.')
     pass
-
