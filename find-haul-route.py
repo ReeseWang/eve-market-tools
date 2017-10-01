@@ -263,6 +263,10 @@ for typeId in orders:
                     continue
                 # Actual margin, can only be lower.
                 marginActual = taxRate * buyTotal / sellTotal - 1
+                if int(locBuy) > 1000000000000 and int(locBuy) not in structList:
+                    continue
+                if int(locSell) > 1000000000000 and int(locSell) not in structList:
+                    continue
                 # sysBuy = getOrderSolarSystem(locBuy)
                 secBuy = getOrderSecurity(locBuy)
                 if not (minSecSta < secBuy < maxSecSta):

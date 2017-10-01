@@ -35,6 +35,7 @@ def _gethdd(id, idcol, table, cols):
     c = _conn.cursor()
     c.execute("SELECT {} FROM hdd.{} "
               "WHERE {}=?".format(cols, table, idcol), (id,))
+    assert c.arraysize == 1
     return c.fetchone()
 
 
