@@ -9,7 +9,7 @@ import sde
 cargoVolumeLim = 20000
 budgetLim = 1e9
 highsecRoute = True
-minSecSta = 0.5
+minSecSta = 0.45
 maxSecSta = 1
 minMargin = 0.1
 minProfit = 5e6
