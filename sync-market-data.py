@@ -20,11 +20,14 @@ except Exception:
 
 def execSQL(sql, conn, data=None):
     logger.debug("Executing SQL:\n" + sql)
-    conn.execute(sql)
+    if data:
+        conn.execute(sql, data)
+    else:
+        conn.execute(sql)
 
 
 def initDB():
-    logger.info("Connecting to '{}'...".format(dbPath))
+    logger.debug("Connecting to '{}'...".format(dbPath))
     conn = sqlite3.connect(dbPath)
     execSQL("DROP TABLE IF EXISTS buyOrderInserting;", conn)
     execSQL('\n'.join([
@@ -54,6 +57,8 @@ def initDB():
         "price REAL NOT NULL CHECK (price > 0),",
         "duration INTEGER NOT NULL CHECK (duration > 0),",
         "issued INTEGER NOT NULL);"]), conn)
+    conn.commit()
+    conn.close()
 
 
 def buyOrderTuple(order, reg):
@@ -89,19 +94,22 @@ def sellOrderTuple(order, reg):
 
 def insertDB(ordersList, reg):
     assert isinstance(reg, int)
-    conn = sqlite3.connect(dbPath)
-    for order in ordersList:
-        if order['is_buy_order']:
-            execSQL("INSERT INTO buyOrderInserting VALUES "
-                    "({});".format(','.join(11*'?')),
-                    conn, data=buyOrderTuple(order, reg))
-        else:
-            execSQL("INSERT INTO buyOrderInserting VALUES "
-                    "({});".format(','.join(10*'?')),
-                    conn, data=sellOrderTuple(order, reg))
+    if(ordersList):
+        logger.debug("Connecting to '{}'...".format(dbPath))
+        conn = sqlite3.connect(dbPath)
+        for order in ordersList:
+            if order['is_buy_order']:
+                execSQL("INSERT INTO buyOrderInserting VALUES "
+                        "({});".format(','.join(11*'?')),
+                        conn, data=buyOrderTuple(order, reg))
+            else:
+                execSQL("INSERT INTO sellOrderInserting VALUES "
+                        "({});".format(','.join(10*'?')),
+                        conn, data=sellOrderTuple(order, reg))
+            pass
+        conn.commit()
+        conn.close()
         pass
-    conn.commit()
-    conn.close()
     pass
 
 
@@ -126,6 +134,7 @@ def getFirstPage(ordersDict, pageCountsDict, reg):
     # return req.json(), int(req.headers['x-pages'])
     # ordersDict[reg] = req.json()
     pageCountsDict[reg] = int(req.headers['x-pages'])
+    logger.info('Region {} has {} pages'.format(regionNames[reg], pageCountsDict[reg]))
     insertDB(req.json(), int(reg))
 
 
@@ -158,16 +167,16 @@ def fetchMarketData():
         pass
 
     for reg in regionsStr:
+        # insertDB(orders[reg], int(reg))
         logger.info('Region {} has {} '
                     'orders'.format(regionNames[reg], len(orders[reg])))
         pass
 
 
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
+initDB()
 if __name__ == '__main__':
-    logger = logging.getLogger()
-    logger.setLevel(logging.DEBUG)
-    initDB()
-
     regionsInt = getRegionList()
 
     regionsStr = []
