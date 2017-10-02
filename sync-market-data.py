@@ -101,6 +101,7 @@ def insertDB(ordersList, reg):
                     conn, data=sellOrderTuple(order, reg))
         pass
     conn.commit()
+    conn.close()
     pass
 
 
