@@ -6,9 +6,10 @@ import logging
 
 try:
     # tornado is bundled with pretty formatter - try using it
-    from tornado.options import enable_pretty_logging
+    from tornado.log import enable_pretty_logging
     enable_pretty_logging()
 except Exception:
+    print("Pretty logging disabled.")
     pass
 
 logger = logging.getLogger()
