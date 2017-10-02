@@ -97,9 +97,10 @@ def insertDB(ordersList, reg):
                     conn, data=buyOrderTuple(order, reg))
         else:
             execSQL("INSERT INTO buyOrderInserting VALUES "
-                    "({});".format(','.join(11*'?')),
+                    "({});".format(','.join(10*'?')),
                     conn, data=sellOrderTuple(order, reg))
         pass
+    conn.commit()
     pass
 
 
