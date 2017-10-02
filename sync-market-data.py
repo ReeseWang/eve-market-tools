@@ -18,12 +18,9 @@ except Exception:
     pass
 
 
-def execSQL(sql, conn, data=None):
+def execSQL(sql, conn):
     logger.debug("Executing SQL:\n" + sql)
-    if data:
-        conn.execute(sql, data)
-    else:
-        conn.execute(sql)
+    conn.execute(sql)
 
 
 def initDB():
@@ -53,62 +50,88 @@ def initDB():
         "region_id INTEGER NOT NULL,",
         "volume_total INTEGER NOT NULL CHECK (volume_total > 0),",
         "volume_remain INTEGER NOT NULL CHECK (volume_remain > 0),",
-        "min_volume INTEGER NOT NULL CHECK (min_volume > 0),",
         "price REAL NOT NULL CHECK (price > 0),",
         "duration INTEGER NOT NULL CHECK (duration > 0),",
+        # "volume_total INTEGER NOT NULL,",
+        # "volume_remain INTEGER NOT NULL,",
+        # "price REAL NOT NULL,",
+        # "duration INTEGER NOT NULL,",
         "issued INTEGER NOT NULL);"]), conn)
     conn.commit()
     conn.close()
 
 
 def buyOrderTuple(order, reg):
-    return (order['order_id'],
-            order['type_id'],
-            order['location_id'],
+    assert isinstance(reg, int)
+    return (int(order['order_id']),
+            int(order['type_id']),
+            int(order['location_id']),
             reg,
-            order['volume_total'],
-            order['volume_remain'],
-            order['min_volume'],
+            int(order['volume_total']),
+            int(order['volume_remain']),
+            int(order['min_volume']),
             order['price'],
             order['range'],
-            order['duration'],
+            int(order['duration']),
             int(datetime.strptime(order['issued'],
                                   '%Y-%m-%dT%H:%M:%SZ').timestamp())
             )
 
 
 def sellOrderTuple(order, reg):
-    return (order['order_id'],
-            order['type_id'],
-            order['location_id'],
+    assert isinstance(reg, int)
+    return (int(order['order_id']),
+            int(order['type_id']),
+            int(order['location_id']),
             reg,
-            order['volume_total'],
-            order['volume_remain'],
-            order['min_volume'],
+            int(order['volume_total']),
+            int(order['volume_remain']),
             order['price'],
-            order['duration'],
+            int(order['duration']),
             int(datetime.strptime(order['issued'],
                                   '%Y-%m-%dT%H:%M:%SZ').timestamp())
             )
 
 
-def insertDB(ordersList, reg):
-    assert isinstance(reg, int)
+def fillOrderTupleLists(ordersList, buyTupleList, sellTupleList, reg):
+    for order in ordersList:
+        if order['is_buy_order']:
+            buyTupleList.append(buyOrderTuple(order, reg))
+        else:
+            sellTupleList.append(sellOrderTuple(order, reg))
+
+
+def execSQLMany(sql, conn, data):
+    logger.debug("Executing SQL:\n" + sql)
+    conn.executemany(sql, data)
+
+
+def insertDB(ordersList, conn, reg):
     if(ordersList):
-        logger.debug("Connecting to '{}'...".format(dbPath))
-        conn = sqlite3.connect(dbPath)
-        for order in ordersList:
-            if order['is_buy_order']:
-                execSQL("INSERT INTO buyOrderInserting VALUES "
+        buyTupleList = []
+        sellTupleList = []
+        fillOrderTupleLists(ordersList,
+                            buyTupleList,
+                            sellTupleList,
+                            reg)
+        if(buyTupleList):
+            execSQLMany("INSERT OR IGNORE INTO buyOrderInserting VALUES "
                         "({});".format(','.join(11*'?')),
-                        conn, data=buyOrderTuple(order, reg))
-            else:
-                execSQL("INSERT INTO sellOrderInserting VALUES "
-                        "({});".format(','.join(10*'?')),
-                        conn, data=sellOrderTuple(order, reg))
-            pass
-        conn.commit()
-        conn.close()
+                        conn, buyTupleList)
+        if(sellTupleList):
+            execSQLMany("INSERT OR IGNORE INTO sellOrderInserting VALUES "
+                        "({});".format(','.join(9*'?')),
+                        conn, sellTupleList)
+        # for order in ordersList:
+        #     if order['is_buy_order']:
+        #         execSQL("INSERT INTO buyOrderInserting VALUES "
+        #                 "({});".format(','.join(11*'?')),
+        #                 conn, data=buyOrderTuple(order, reg))
+        #     else:
+        #         execSQL("INSERT INTO sellOrderInserting VALUES "
+        #                 "({});".format(','.join(10*'?')),
+        #                 conn, data=sellOrderTuple(order, reg))
+        #     pass
         pass
     pass
 
@@ -118,8 +141,8 @@ def getOrders(ordersList, reg, page):
                        str(reg) + '/orders/?datasource=tranquility' +
                        '&order_type=all&page=' + str(page))
     assert req.status_code == 200
-    # ordersList.extend(req.json())
-    insertDB(req.json(), int(reg))
+    ordersList.extend(req.json())
+    # insertDB(req.json(), int(reg))
     logger.info('Region {} Page {} received.'.format(regionNames[reg], page))
     pass
 
@@ -132,10 +155,11 @@ def getFirstPage(ordersDict, pageCountsDict, reg):
                        '&order_type=all&page=1')
     assert req.status_code == 200
     # return req.json(), int(req.headers['x-pages'])
-    # ordersDict[reg] = req.json()
+    ordersDict[reg] = req.json()
     pageCountsDict[reg] = int(req.headers['x-pages'])
-    logger.info('Region {} has {} pages'.format(regionNames[reg], pageCountsDict[reg]))
-    insertDB(req.json(), int(reg))
+    logger.info('Region {} has {} '
+                'pages'.format(regionNames[reg], pageCountsDict[reg]))
+    # insertDB(req.json(), int(reg))
 
 
 def getRegionList():
@@ -166,16 +190,26 @@ def fetchMarketData():
             pass
         pass
 
+
+def dumpToDatabse():
+    logger.debug("Connecting to '{}'...".format(dbPath))
+    conn = sqlite3.connect(dbPath)
     for reg in regionsStr:
-        # insertDB(orders[reg], int(reg))
         logger.info('Region {} has {} '
-                    'orders'.format(regionNames[reg], len(orders[reg])))
+                    'orders, inserting into '
+                    'database'.format(regionNames[reg], len(orders[reg])))
+        insertDB(orders[reg], conn, int(reg))
         pass
+    conn.commit()
+    conn.close()
 
 
 logger = logging.getLogger()
-logger.setLevel(logging.INFO)
+if __name__ == '__main__':
+    logger.setLevel(logging.DEBUG)
+
 initDB()
+
 if __name__ == '__main__':
     regionsInt = getRegionList()
 
@@ -191,3 +225,4 @@ if __name__ == '__main__':
         regionNames[str(reg)] = sde.getItemName(reg)
 
     fetchMarketData()
+    dumpToDatabse()
