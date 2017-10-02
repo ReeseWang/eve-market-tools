@@ -166,7 +166,6 @@ def getRegionList():
     logger.info('Getting region list...')
     req = requests.get('https://esi.tech.ccp.is/'
                        'latest/universe/regions/?datasource=tranquility')
-    logger.debug('Sent GET request to ' + req.url)
     assert req.status_code == 200
     return req.json()
 
