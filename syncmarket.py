@@ -21,7 +21,8 @@ except Exception:
 
 def execSQL(sql, conn):
     logger.debug("Executing SQL:\n" + sql)
-    conn.execute(sql)
+    c = conn.execute(sql)
+    return c.rowcount
 
 
 def initDB(pconn):
@@ -64,6 +65,7 @@ def initDB(pconn):
         "structure_id INTEGER PRIMARY KEY,",
         "name TEXT NOT NULL,",
         "solar_system_id INTEGER NOT NULL);"]), pconn)
+    pass
 
     # conn.commit()
     # conn.close()
@@ -240,6 +242,42 @@ def insertStructuresDB(pstructs, pconn):
                        'database'.format(structuresCount - rows))
 
 
+def filterOrders(pconn):
+    rows = execSQL('\n'.join([
+        "DELETE",
+        "FROM",
+        "buyOrdersInserting",
+        "WHERE (",
+        "   (location_id > 100000000) AND (",
+        "       location_id NOT IN (",
+        "           SELECT",
+        "           structure_id",
+        "           FROM",
+        "           publicStructuresInserting",
+        "       )",
+        "   )",
+        ");"]), pconn)
+    if rows != 0:
+        logger.info("{} buy orders deleted because of not located in a public "
+                    "structure.".format(rows))
+    rows = execSQL('\n'.join([
+        "DELETE",
+        "FROM",
+        "sellOrdersInserting",
+        "WHERE (",
+        "   (location_id > 100000000) AND (",
+        "       location_id NOT IN (",
+        "           SELECT",
+        "           structure_id",
+        "           FROM",
+        "           publicStructuresInserting",
+        "       )",
+        "   )",
+        ");"]), pconn)
+    if rows != 0:
+        logger.info("{} sell orders deleted because of not located in a public "
+                    "structure.".format(rows))
+
 def dumpToDatabse(porders, pstructs, pregionsStr, pregionNames):
     logger.debug("Connecting to '{}'...".format(dbPath))
     conn = sqlite3.connect(dbPath)
@@ -261,6 +299,92 @@ def dumpToDatabse(porders, pstructs, pregionsStr, pregionNames):
                 pass
             pass
         pass
+    filterOrders(conn)
+    replaceTable(conn)
+    conn.commit()
+    conn.close()
+    pass
+
+
+def getStructureInfo(pstructs, pID, client):
+    pstructs[pID] =\
+        client.get('https://esi.tech.ccp.is/latest/universe/structures/' +
+                pID + '/?datasource=tranquility').json()
+    logger.info('Structure {} info received, its name is '
+                '{}.'.format(pID, pstructs[pID]['name']))
+
+
+def fetchStructuresInfo(pstructs, pIDList):
+    client = authedClient()
+    client.getCharacterID()
+    with ThreadPoolExecutor(max_workers=100) as executor:
+        for ID in pIDList:
+            # Single thread test
+            # getStructureInfo(pstructs, ID, client)
+            executor.submit(getStructureInfo, pstructs, ID, client)
+            pass
+
+
+def main():
+    regionsInt = getRegionsList()
+    structuresInt = getStructuresList()
+
+    # structuresInt = structuresInt[0:100]
+
+    regionsStr = []
+    for reg in regionsInt:
+        regionsStr.append(str(reg))
+        pass
+    structuresStr = []
+    for struct in structuresInt:
+        structuresStr.append(str(struct))
+        pass
+
+    orders = dict.fromkeys(regionsStr, [])
+    structures = dict.fromkeys(structuresStr, None)
+
+    regionNames = dict.fromkeys(regionsStr, None)
+
+    for reg in regionsInt:
+        regionNames[str(reg)] = sde.getItemName(reg)
+
+    fetchStructuresInfo(structures, structuresStr)
+    if len(structures) != len(structuresStr):
+        logger.warning("Info of {} strutures not retrieved "
+                       "successfully".format(
+                           len(structuresStr) - len(structures)))
+    fetchMarketData(orders, regionsStr, regionNames)
+    dumpToDatabse(orders, structures, regionsStr, regionNames)
+
+
+logger = logging.getLogger()
+if __name__ == '__main__':
+    logger.setLevel(logging.DEBUG)
+    main()
+
+
+def dumpToDatabse(porders, pstructs, pregionsStr, pregionNames):
+    logger.debug("Connecting to '{}'...".format(dbPath))
+    conn = sqlite3.connect(dbPath)
+    initDB(conn)
+    insertStructuresDB(pstructs, conn)
+    for reg in pregionsStr:
+        ordersCount = len(porders[reg])
+        if ordersCount != 0:
+            logger.info('Region {} has {} '
+                        'orders, inserting into '
+                        'database'.format(pregionNames[reg], ordersCount))
+            rows = insertDB(porders[reg], conn, int(reg))
+            logger.debug('Region {}: {} inserted.'.format(pregionNames[reg],
+                                                        rows))
+            if ordersCount != rows:
+                logger.warning('Region {} has {} order(s) not inserted into the '
+                            'database.'.format(pregionNames[reg],
+                                                ordersCount - rows))
+                pass
+            pass
+        pass
+    filterOrders(conn)
     replaceTable(conn)
     conn.commit()
     conn.close()
