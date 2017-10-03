@@ -136,20 +136,18 @@ def insertDB(ordersList, conn, reg):
     pass
 
 
-def getOrders(pordersList, preg, ppage):
+def getOrders(pordersList, pregionNames, preg, ppage):
     req = requests.get('https://esi.tech.ccp.is/latest/markets/' +
                        str(preg) + '/orders/?datasource=tranquility' +
                        '&order_type=all&page=' + str(ppage))
     assert req.status_code == 200
     pordersList.extend(req.json())
     # insertDB(req.json(), int(reg))
-    logger.info('Region {} Page {} received.'.format(regionNames[preg], ppage))
+    logger.info('Region {} Page {} received.'.format(pregionNames[preg], ppage))
     pass
 
 
-def getFirstPage(porders, ppageCounts, preg):
-    logger.info('Getting the first page of orders '
-                'in region {}'.format(regionNames[preg]))
+def getFirstPage(porders, ppageCounts, pregionNames, preg):
     req = requests.get('https://esi.tech.ccp.is/latest/markets/' +
                        preg + '/orders/?datasource=tranquility' +
                        '&order_type=all&page=1')
@@ -157,8 +155,9 @@ def getFirstPage(porders, ppageCounts, preg):
     # return req.json(), int(req.headers['x-pages'])
     porders[preg] = req.json()
     ppageCounts[preg] = int(req.headers['x-pages'])
-    logger.info('Region {} has {} '
-                'pages'.format(regionNames[preg], ppageCounts[preg]))
+    logger.info('Got the first page of orders in {0}. {0} has {1} '
+                'pages of orders. Last modified '
+                'at {2}.'.format(pregionNames[preg], ppageCounts[preg], req.headers['last-modified']))
     # insertDB(req.json(), int(reg))
 
 
@@ -170,11 +169,11 @@ def getRegionList():
     return req.json()
 
 
-def fetchMarketData(porders, pregionsStr):
+def fetchMarketData(porders, pregionsStr, pregionNames):
     pageCounts = dict.fromkeys(pregionsStr, 0)
     with ThreadPoolExecutor(max_workers=10) as executor:
         for reg in pregionsStr:
-            executor.submit(getFirstPage, porders, pageCounts, reg)
+            executor.submit(getFirstPage, porders, pageCounts, pregionNames, reg)
             pass
 
     with ThreadPoolExecutor(max_workers=10) as executor:
@@ -185,7 +184,7 @@ def fetchMarketData(porders, pregionsStr):
                 import sys
                 sys.exit("{}, {}".format(reg, pageCounts[reg]))
             for page in range(1, pageCounts[reg]):
-                executor.submit(getOrders, porders[reg], reg, page+1)
+                executor.submit(getOrders, porders[reg], pregionNames, reg, page+1)
                 pass
             pass
         pass
@@ -200,24 +199,22 @@ ALTER TABLE sellOrdersInserting RENAME TO sellOrders;"""
     pconn.executescript(sql)
 
 
-def dumpToDatabse():
+def dumpToDatabse(porders, pregionsStr, pregionNames):
     logger.debug("Connecting to '{}'...".format(dbPath))
     conn = sqlite3.connect(dbPath)
     initDB(conn)
-    for reg in regionsStr:
+    for reg in pregionsStr:
         logger.info('Region {} has {} '
                     'orders, inserting into '
-                    'database'.format(regionNames[reg], len(orders[reg])))
-        insertDB(orders[reg], conn, int(reg))
+                    'database'.format(pregionNames[reg], len(porders[reg])))
+        insertDB(porders[reg], conn, int(reg))
         pass
     replaceTable(conn)
     conn.commit()
     conn.close()
 
 
-logger = logging.getLogger()
-if __name__ == '__main__':
-    logger.setLevel(logging.DEBUG)
+def main():
     regionsInt = getRegionList()
 
     regionsStr = []
@@ -230,5 +227,12 @@ if __name__ == '__main__':
     for reg in regionsInt:
         regionNames[str(reg)] = sde.getItemName(reg)
 
-    fetchMarketData(orders, regionsStr)
-    dumpToDatabse()
+    fetchMarketData(orders, regionsStr, regionNames)
+    dumpToDatabse(orders, regionsStr, regionNames)
+
+
+logger = logging.getLogger()
+if __name__ == '__main__':
+    logger.setLevel(logging.DEBUG)
+
+main()
