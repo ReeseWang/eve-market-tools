@@ -7,6 +7,7 @@ import urllib.parse
 import json
 import base64
 import requests
+import time
 
 class authedClient:
 
@@ -70,8 +71,8 @@ class authedClient:
     def postToGetToken(self, postData):
         headerAuthString = 'Basic ' + \
                         base64.b64encode(
-                                (secret.clientID + 
-                                    ':' + 
+                                (secret.clientID +
+                                    ':' +
                                     secret.secretKey).encode('utf-8')).decode('utf-8')
         postHeaders = {
                 'Authorization': headerAuthString,
@@ -108,22 +109,21 @@ class authedClient:
         pass
 
     def get(self, url):
-        try:
-            response = requests.get(url, headers = self.headers)
-            response.raise_for_status()
-            if response.ok:
-                return response
-        except requests.exceptions.HTTPError as error:
-            if 'expired' in response.text:
-                self.getToken('refresh')
+        while True:
+            try:
                 response = requests.get(url, headers = self.headers)
-                return response
-            else:
-                import sys
-                sys.exit(error)
-        except Exception as error:
-            import sys
-            sys.exit(error)
+                response.raise_for_status()
+                if response.ok:
+                    return response
+            except requests.exceptions.HTTPError as error:
+                if 'expired' in response.text:
+                    self.getToken('refresh')
+                    response = requests.get(url, headers = self.headers)
+                    return response
+                else:
+                    time.sleep(5)
+            except Exception as error:
+                time.sleep(5)
 
     def post(self, url, data=None):
         try:

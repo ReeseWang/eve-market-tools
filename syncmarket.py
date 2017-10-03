@@ -7,6 +7,7 @@ import logging
 import sde
 from datetime import datetime
 from esiauth import authedClient
+import time
 
 dbPath = './db/market.sqlite'
 
@@ -17,6 +18,15 @@ try:
 except Exception:
     print("Pretty logging disabled.")
     pass
+
+
+def endlessGet(url):
+    while True:
+        res = requests.get(url)
+        if res.ok:
+            return res
+        else:
+            time.sleep(5)
 
 
 def execSQL(sql, conn):
@@ -149,7 +159,7 @@ def insertDB(ordersList, conn, reg):
 
 
 def getOrders(pordersList, pregionNames, preg, ppage):
-    req = requests.get('https://esi.tech.ccp.is/latest/markets/' +
+    req = endlessGet('https://esi.tech.ccp.is/latest/markets/' +
                        str(preg) + '/orders/?datasource=tranquility' +
                        '&order_type=all&page=' + str(ppage))
     assert req.status_code == 200
@@ -160,7 +170,7 @@ def getOrders(pordersList, pregionNames, preg, ppage):
 
 
 def getFirstPage(porders, ppageCounts, pregionNames, preg):
-    req = requests.get('https://esi.tech.ccp.is/latest/markets/' +
+    req = endlessGet('https://esi.tech.ccp.is/latest/markets/' +
                        preg + '/orders/?datasource=tranquility' +
                        '&order_type=all&page=1')
     assert req.status_code == 200
@@ -175,7 +185,7 @@ def getFirstPage(porders, ppageCounts, pregionNames, preg):
 
 def getRegionsList():
     logger.info('Getting region list...')
-    req = requests.get('https://esi.tech.ccp.is/'
+    req = endlessGet('https://esi.tech.ccp.is/'
                        'latest/universe/regions/?datasource=tranquility')
     assert req.status_code == 200
     return req.json()
@@ -183,7 +193,7 @@ def getRegionsList():
 
 def getStructuresList():
     logger.info('Getting structures list...')
-    req = requests.get('https://esi.tech.ccp.is/'
+    req = endlessGet('https://esi.tech.ccp.is/'
                        'latest/universe/structures/?datasource=tranquility')
     assert req.status_code == 200
     res = req.json()
@@ -361,89 +371,3 @@ logger = logging.getLogger()
 if __name__ == '__main__':
     logger.setLevel(logging.DEBUG)
     main()
-
-
-def dumpToDatabse(porders, pstructs, pregionsStr, pregionNames):
-    logger.debug("Connecting to '{}'...".format(dbPath))
-    conn = sqlite3.connect(dbPath)
-    initDB(conn)
-    insertStructuresDB(pstructs, conn)
-    for reg in pregionsStr:
-        ordersCount = len(porders[reg])
-        if ordersCount != 0:
-            logger.info('Region {} has {} '
-                        'orders, inserting into '
-                        'database'.format(pregionNames[reg], ordersCount))
-            rows = insertDB(porders[reg], conn, int(reg))
-            logger.debug('Region {}: {} inserted.'.format(pregionNames[reg],
-                                                        rows))
-            if ordersCount != rows:
-                logger.warning('Region {} has {} order(s) not inserted into the '
-                            'database.'.format(pregionNames[reg],
-                                                ordersCount - rows))
-                pass
-            pass
-        pass
-    filterOrders(conn)
-    replaceTable(conn)
-    conn.commit()
-    conn.close()
-    pass
-
-
-def getStructureInfo(pstructs, pID, client):
-    pstructs[pID] =\
-        client.get('https://esi.tech.ccp.is/latest/universe/structures/' +
-                pID + '/?datasource=tranquility').json()
-    logger.info('Structure {} info received, its name is '
-                '{}.'.format(pID, pstructs[pID]['name']))
-
-
-def fetchStructuresInfo(pstructs, pIDList):
-    client = authedClient()
-    # client.getCharacterID()
-    with ThreadPoolExecutor(max_workers=20) as executor:
-        for ID in pIDList:
-            # Single thread test
-            # getStructureInfo(pstructs, ID, client)
-            executor.submit(getStructureInfo, pstructs, ID, client)
-            pass
-
-
-def main():
-    regionsInt = getRegionsList()
-    structuresInt = getStructuresList()
-
-    # structuresInt = structuresInt[0:100]
-
-    regionsStr = []
-    for reg in regionsInt:
-        regionsStr.append(str(reg))
-        pass
-    structuresStr = []
-    for struct in structuresInt:
-        structuresStr.append(str(struct))
-        pass
-
-    orders = dict.fromkeys(regionsStr, [])
-    structures = dict.fromkeys(structuresStr, None)
-
-    regionNames = dict.fromkeys(regionsStr, None)
-
-    for reg in regionsInt:
-        regionNames[str(reg)] = sde.getItemName(reg)
-
-    fetchStructuresInfo(structures, structuresStr)
-    if len(structures) != len(structuresStr):
-        logger.warning("Info of {} strutures not retrieved "
-                       "successfully".format(
-                           len(structuresStr) - len(structures)))
-    fetchMarketData(orders, regionsStr, regionNames)
-    dumpToDatabse(orders, structures, regionsStr, regionNames)
-
-
-logger = logging.getLogger()
-if __name__ == '__main__':
-    logger.setLevel(logging.DEBUG)
-    main()
-
