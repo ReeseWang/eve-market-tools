@@ -103,10 +103,12 @@ def fillOrderTupleLists(ordersList, buyTupleList, sellTupleList, reg):
 
 def execSQLMany(sql, conn, data):
     logger.debug("Executing SQL:\n" + sql)
-    conn.executemany(sql, data)
+    c = conn.executemany(sql, data)
+    return c.rowcount
 
 
 def insertDB(ordersList, conn, reg):
+    rows = 0
     if(ordersList):
         buyTupleList = []
         sellTupleList = []
@@ -115,13 +117,13 @@ def insertDB(ordersList, conn, reg):
                             sellTupleList,
                             reg)
         if(buyTupleList):
-            execSQLMany("INSERT OR IGNORE INTO buyOrdersInserting VALUES "
-                        "({});".format(','.join(11*'?')),
-                        conn, buyTupleList)
+            rows += execSQLMany("INSERT OR IGNORE INTO buyOrdersInserting VALUES "
+                                "({});".format(','.join(11*'?')),
+                                conn, buyTupleList)
         if(sellTupleList):
-            execSQLMany("INSERT OR IGNORE INTO sellOrdersInserting VALUES "
-                        "({});".format(','.join(9*'?')),
-                        conn, sellTupleList)
+            rows += execSQLMany("INSERT OR IGNORE INTO sellOrdersInserting VALUES "
+                                "({});".format(','.join(9*'?')),
+                                conn, sellTupleList)
         # for order in ordersList:
         #     if order['is_buy_order']:
         #         execSQL("INSERT INTO buyOrdersInserting VALUES "
@@ -133,7 +135,7 @@ def insertDB(ordersList, conn, reg):
         #                 conn, data=sellOrderTuple(order, reg))
         #     pass
         pass
-    pass
+    return rows
 
 
 def getOrders(pordersList, pregionNames, preg, ppage):
@@ -204,10 +206,17 @@ def dumpToDatabse(porders, pregionsStr, pregionNames):
     conn = sqlite3.connect(dbPath)
     initDB(conn)
     for reg in pregionsStr:
+        ordersCount = len(porders[reg])
         logger.info('Region {} has {} '
                     'orders, inserting into '
-                    'database'.format(pregionNames[reg], len(porders[reg])))
-        insertDB(porders[reg], conn, int(reg))
+                    'database'.format(pregionNames[reg], ordersCount))
+        rows = insertDB(porders[reg], conn, int(reg))
+        logger.debug('Region {}: {} inserted.'.format(pregionNames[reg],
+                                                      rows))
+        if ordersCount != rows:
+            logger.warning('Region {} has {} order(s) not inserted into the '
+                           'database.'.format(pregionNames[reg],
+                                              ordersCount - rows))
         pass
     replaceTable(conn)
     conn.commit()
