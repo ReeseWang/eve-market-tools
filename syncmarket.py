@@ -207,16 +207,19 @@ def dumpToDatabse(porders, pregionsStr, pregionNames):
     initDB(conn)
     for reg in pregionsStr:
         ordersCount = len(porders[reg])
-        logger.info('Region {} has {} '
-                    'orders, inserting into '
-                    'database'.format(pregionNames[reg], ordersCount))
-        rows = insertDB(porders[reg], conn, int(reg))
-        logger.debug('Region {}: {} inserted.'.format(pregionNames[reg],
-                                                      rows))
-        if ordersCount != rows:
-            logger.warning('Region {} has {} order(s) not inserted into the '
-                           'database.'.format(pregionNames[reg],
-                                              ordersCount - rows))
+        if ordersCount != 0:
+            logger.info('Region {} has {} '
+                        'orders, inserting into '
+                        'database'.format(pregionNames[reg], ordersCount))
+            rows = insertDB(porders[reg], conn, int(reg))
+            logger.debug('Region {}: {} inserted.'.format(pregionNames[reg],
+                                                        rows))
+            if ordersCount != rows:
+                logger.warning('Region {} has {} order(s) not inserted into the '
+                            'database.'.format(pregionNames[reg],
+                                                ordersCount - rows))
+                pass
+            pass
         pass
     replaceTable(conn)
     conn.commit()
