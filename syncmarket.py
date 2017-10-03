@@ -199,6 +199,40 @@ ALTER TABLE sellOrdersInserting RENAME TO sellOrders;"""
     pconn.executescript(sql)
 
 
+def checkInsert(porders, pconn, pregionNames):
+    c = pconn.cursor()
+    sql = '\n'.join([
+        "SELECT "
+        "COUNT(order_id), region_id "
+        "FROM ("
+        "   SELECT "
+        "   order_id, region_id "
+        "   FROM "
+        "   buyOrders "
+        "   UNION ALL "
+        "   SELECT "
+        "   order_id, region_id "
+        "   FROM sellOrders"
+        ") "
+        "GROUP BY "
+        "region_id;"])
+    logger.debug("Executing SQL:\n" + sql)
+    c.execute(sql)
+    rowCounts = c.fetchall()
+    for count, region_id in rowCounts:
+        countDownloaded = len(porders[str(region_id)])
+        logger.debug("Region {}: {} downloaded, {} "
+                     "inserted".format(pregionNames[str(region_id)],
+                                       countDownloaded, count))
+        if count != countDownloaded:
+            logger.warning("Region {} has {} order(s) not inserted to "
+                           "database.".format(pregionNames[str(region_id)],
+                                              countDownloaded - count))
+            pass
+        pass
+
+
+
 def dumpToDatabse(porders, pregionsStr, pregionNames):
     logger.debug("Connecting to '{}'...".format(dbPath))
     conn = sqlite3.connect(dbPath)
@@ -211,6 +245,7 @@ def dumpToDatabse(porders, pregionsStr, pregionNames):
         pass
     replaceTable(conn)
     conn.commit()
+    checkInsert(porders, conn, pregionNames)
     conn.close()
 
 
