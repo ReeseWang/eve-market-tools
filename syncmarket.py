@@ -234,5 +234,5 @@ def main():
 logger = logging.getLogger()
 if __name__ == '__main__':
     logger.setLevel(logging.DEBUG)
+    main()
 
-main()
