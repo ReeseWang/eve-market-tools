@@ -3,6 +3,7 @@
 import sqlite3
 import logging
 from syncmarket import dbPath as marketDBPath
+import os
 
 
 try:
@@ -137,9 +138,12 @@ cacheTableToMemory('mapSolarSystems')
 typesPackVol = _cacheItemsPackVols()
 
 _conn.execute("DETACH hdd;")
-_conn.execute("ATTACH '{}' AS hdd;".format(marketDBPath))
 
-cacheTableToMemory('buyOrders')
-cacheTableToMemory('sellOrders')
+if os.path.exists(marketDBPath):
+    _conn.execute("ATTACH '{}' AS hdd;".format(marketDBPath))
 
-_conn.execute("DETACH hdd;")
+    cacheTableToMemory('buyOrders')
+    cacheTableToMemory('sellOrders')
+
+    _conn.execute("DETACH hdd;")
+    pass

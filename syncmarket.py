@@ -6,6 +6,7 @@ from concurrent.futures import ThreadPoolExecutor
 import logging
 import sde
 from datetime import datetime
+from esiauth import authedClient
 
 dbPath = './db/market.sqlite'
 
@@ -57,6 +58,13 @@ def initDB(pconn):
         # "price REAL NOT NULL,",
         # "duration INTEGER NOT NULL,",
         "issued INTEGER NOT NULL);"]), pconn)
+    execSQL("DROP TABLE IF EXISTS publicStructuresInserting;", pconn)
+    execSQL('\n'.join([
+        "CREATE TABLE publicStructuresInserting (",
+        "structure_id INTEGER PRIMARY KEY,",
+        "name TEXT NOT NULL,",
+        "solar_system_id INTEGER NOT NULL);"]), pconn)
+
     # conn.commit()
     # conn.close()
 
@@ -163,7 +171,7 @@ def getFirstPage(porders, ppageCounts, pregionNames, preg):
     # insertDB(req.json(), int(reg))
 
 
-def getRegionList():
+def getRegionsList():
     logger.info('Getting region list...')
     req = requests.get('https://esi.tech.ccp.is/'
                        'latest/universe/regions/?datasource=tranquility')
@@ -171,14 +179,24 @@ def getRegionList():
     return req.json()
 
 
+def getStructuresList():
+    logger.info('Getting structures list...')
+    req = requests.get('https://esi.tech.ccp.is/'
+                       'latest/universe/structures/?datasource=tranquility')
+    assert req.status_code == 200
+    res = req.json()
+    logger.info("There are {} public structures.".format(len(res)))
+    return res
+
+
 def fetchMarketData(porders, pregionsStr, pregionNames):
     pageCounts = dict.fromkeys(pregionsStr, 0)
-    with ThreadPoolExecutor(max_workers=10) as executor:
+    with ThreadPoolExecutor(max_workers=20) as executor:
         for reg in pregionsStr:
             executor.submit(getFirstPage, porders, pageCounts, pregionNames, reg)
             pass
 
-    with ThreadPoolExecutor(max_workers=10) as executor:
+    with ThreadPoolExecutor(max_workers=20) as executor:
         for reg in pregionsStr:
             try:
                 assert pageCounts[reg] >= 1
@@ -196,15 +214,37 @@ def replaceTable(pconn):
     sql = """DROP TABLE IF EXISTS buyOrders;
 ALTER TABLE buyOrdersInserting RENAME TO buyOrders;
 DROP TABLE IF EXISTS sellOrders;
-ALTER TABLE sellOrdersInserting RENAME TO sellOrders;"""
+ALTER TABLE sellOrdersInserting RENAME TO sellOrders;
+DROP TABLE IF EXISTS publicStructures;
+ALTER TABLE publicStructuresInserting RENAME TO publicStructures;"""
     logger.debug("Executing SQL:\n" + sql)
     pconn.executescript(sql)
 
 
-def dumpToDatabse(porders, pregionsStr, pregionNames):
+def fillStructuresTupleList(pstructs, ptuplelist):
+    for key, struct in pstructs.items():
+        ptuplelist.append((int(key), struct['name'], struct['solar_system_id']))
+        pass
+    pass
+
+
+def insertStructuresDB(pstructs, pconn):
+    structuresTupleList = []
+    fillStructuresTupleList(pstructs, structuresTupleList)
+    rows = execSQLMany("INSERT OR IGNORE INTO publicStructuresInserting VALUES "
+                       "(?,?,?);", pconn, structuresTupleList)
+    logger.debug('Structures: {} rows inserted.'.format(rows))
+    structuresCount = len(pstructs)
+    if rows != structuresCount:
+        logger.warning('{} structures not inserted into the '
+                       'database'.format(structuresCount - rows))
+
+
+def dumpToDatabse(porders, pstructs, pregionsStr, pregionNames):
     logger.debug("Connecting to '{}'...".format(dbPath))
     conn = sqlite3.connect(dbPath)
     initDB(conn)
+    insertStructuresDB(pstructs, conn)
     for reg in pregionsStr:
         ordersCount = len(porders[reg])
         if ordersCount != 0:
@@ -224,23 +264,58 @@ def dumpToDatabse(porders, pregionsStr, pregionNames):
     replaceTable(conn)
     conn.commit()
     conn.close()
+    pass
+
+
+def getStructureInfo(pstructs, pID, client):
+    pstructs[pID] =\
+        client.get('https://esi.tech.ccp.is/latest/universe/structures/' +
+                pID + '/?datasource=tranquility').json()
+    logger.info('Structure {} info received, its name is '
+                '{}.'.format(pID, pstructs[pID]['name']))
+
+
+def fetchStructuresInfo(pstructs, pIDList):
+    client = authedClient()
+    # client.getCharacterID()
+    with ThreadPoolExecutor(max_workers=20) as executor:
+        for ID in pIDList:
+            # Single thread test
+            # getStructureInfo(pstructs, ID, client)
+            executor.submit(getStructureInfo, pstructs, ID, client)
+            pass
 
 
 def main():
-    regionsInt = getRegionList()
+    regionsInt = getRegionsList()
+    structuresInt = getStructuresList()
+
+    # structuresInt = structuresInt[0:100]
 
     regionsStr = []
     for reg in regionsInt:
         regionsStr.append(str(reg))
         pass
+    structuresStr = []
+    for struct in structuresInt:
+        structuresStr.append(str(struct))
+        pass
+
     orders = dict.fromkeys(regionsStr, [])
+    structures = dict.fromkeys(structuresStr, None)
+
     regionNames = dict.fromkeys(regionsStr, None)
 
     for reg in regionsInt:
         regionNames[str(reg)] = sde.getItemName(reg)
 
+    fetchStructuresInfo(structures, structuresStr)
+    if len(structures) != len(structuresStr):
+        logger.warning("Info of {} strutures not retrieved "
+                       "successfully".format(
+                           len(structuresStr) - len(structures)))
     fetchMarketData(orders, regionsStr, regionNames)
-    dumpToDatabse(orders, regionsStr, regionNames)
+    dumpToDatabse(orders, structures, regionsStr, regionNames)
 
 
 logger = logging.getLogger()
