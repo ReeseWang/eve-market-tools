@@ -22,6 +22,26 @@ except Exception:
 logger = logging.getLogger()
 
 
+class BuyOrder:
+
+    def __init__(self, dictOrder, regionID):
+        self.orderID = dictOrder['order_id']
+        self.typeID = dictOrder['type_id']
+        self.locationID = dictOrder['location_id']
+        self.regionID = regionID
+        self.volumeTotal = dictOrder['volume_total']
+        self.volumeRemain = dictOrder['volume_remain']
+        self.minVolume = dictOrder['min_volume']
+        self.price = dictOrder['price']
+        self.buyRange = dictOrder['range']
+        self.duration = dictOrder['duration']
+        self.issuedTime = datetime.strptime(dictOrder['issued'],
+                                            '%Y-%m-%dT%H:%M:%SZ')
+
+    def __conform__(self):
+        pass
+
+
 class EVESyncWorker:
 
     def endlessGet(self, url):
