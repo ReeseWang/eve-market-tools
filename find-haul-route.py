@@ -148,15 +148,15 @@ def getRoute(src, dst):
 def tradePairInfoStr(pair):
     return '\n'.join(['Item: \t\t{item_name}',
                       'Profit: \t{profit:,.2f} ISK',
-                      'Volume: \t{volume}',
+                      'Volume: \t{volume}\t'
                       'Cost: \t\t{cost:,.2f} ISK',
-                      'Min. volume: \t{min_volume}',
-                      'Min. cost: \t{min_cost:,.2f} ISK',
+                      'Min. volume: \t{min_volume}\t'
+                      'Min. cost: \t{min_cost:,.2f} ISK\t'
                       'Total size: \t{total_size:.2f} m3',
                       'From: \t\t{from_sec:.2f} {from_name}',
-                      'To: \t\t{to_sec:.2f} {to_name}',
+                      'To: \t\t{to_sec:.2f} {to_name}\t'
                       'Jumps: \t\t{jumps}',
-                      'Profit/jump: \t{profit_per_jump:,.2f} ISK',
+                      'Profit/jump: \t{profit_per_jump:,.2f} ISK\t'
                       'Profit limit factor: {profit_limit_factor}.'
                       ]).format_map(pair)
 
