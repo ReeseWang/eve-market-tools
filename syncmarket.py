@@ -38,11 +38,22 @@ class BuyOrder:
         self.issuedTime = datetime.strptime(dictOrder['issued'],
                                             '%Y-%m-%dT%H:%M:%SZ')
 
-    def __conform__(self):
+    # A failure. I thought adapter can be used to insert multi column
+    def __conform__(self, protocol):
+        if protocol is sqlite3.PrepareProtocol:
+            return (self.orderID, self.typeID,
+                    self.locationID, self.regionID,
+                    self.volumeTotal, self.volumeRemain,
+                    self.minVolume, self.price,
+                    self.buyRange, self.duration,
+                    self.issuedTime.timestamp())
         pass
 
 
 class EVESyncWorker:
+
+    def __init__(self):
+        self.orderTupleList = []
 
     def endlessGet(self, url):
         while True:
@@ -366,6 +377,8 @@ class EVESyncWorker:
         structuresInt = self.getStructuresList()
 
         # structuresInt = structuresInt[0:100]
+        # You definitely don't want to touch region SOLITUDE
+        regionsInt.remove(10000044)
 
         regionsStr = []
         for reg in regionsInt:
