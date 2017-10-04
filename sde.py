@@ -2,7 +2,7 @@
 
 import sqlite3
 import logging
-from syncmarket import dbPath as marketDBPath
+# from syncmarket import dbPath as marketDBPath
 import os
 
 
@@ -139,6 +139,7 @@ typesPackVol = _cacheItemsPackVols()
 
 _conn.execute("DETACH hdd;")
 
+marketDBPath = './db/market.sqlite'
 if os.path.exists(marketDBPath):
     _conn.execute("ATTACH '{}' AS hdd;".format(marketDBPath))
 
