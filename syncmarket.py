@@ -137,11 +137,13 @@ def insertDB(ordersList, conn, reg):
                             sellTupleList,
                             reg)
         if(buyTupleList):
-            rows += execSQLMany("INSERT OR IGNORE INTO buyOrdersInserting VALUES "
+            rows += execSQLMany("INSERT OR IGNORE INTO "
+                                "buyOrdersInserting VALUES "
                                 "({});".format(','.join(11*'?')),
                                 conn, buyTupleList)
         if(sellTupleList):
-            rows += execSQLMany("INSERT OR IGNORE INTO sellOrdersInserting VALUES "
+            rows += execSQLMany("INSERT OR IGNORE INTO "
+                                "sellOrdersInserting VALUES "
                                 "({});".format(','.join(9*'?')),
                                 conn, sellTupleList)
         # for order in ordersList:
@@ -160,8 +162,8 @@ def insertDB(ordersList, conn, reg):
 
 def getOrders(pordersList, pregionNames, preg, ppage):
     req = endlessGet('https://esi.tech.ccp.is/latest/markets/' +
-                       str(preg) + '/orders/?datasource=tranquility' +
-                       '&order_type=all&page=' + str(ppage))
+                     str(preg) + '/orders/?datasource=tranquility' +
+                     '&order_type=all&page=' + str(ppage))
     assert req.status_code == 200
     pordersList.extend(req.json())
     # insertDB(req.json(), int(reg))
@@ -171,22 +173,24 @@ def getOrders(pordersList, pregionNames, preg, ppage):
 
 def getFirstPage(porders, ppageCounts, pregionNames, preg):
     req = endlessGet('https://esi.tech.ccp.is/latest/markets/' +
-                       preg + '/orders/?datasource=tranquility' +
-                       '&order_type=all&page=1')
+                     preg + '/orders/?datasource=tranquility' +
+                     '&order_type=all&page=1')
     assert req.status_code == 200
     # return req.json(), int(req.headers['x-pages'])
     porders[preg] = req.json()
     ppageCounts[preg] = int(req.headers['x-pages'])
     logger.info('Got the first page of orders in {0}. {0} has {1} '
                 'pages of orders. Last modified '
-                'at {2}.'.format(pregionNames[preg], ppageCounts[preg], req.headers['last-modified']))
+                'at {2}.'.format(pregionNames[preg],
+                                 ppageCounts[preg],
+                                 req.headers['last-modified']))
     # insertDB(req.json(), int(reg))
 
 
 def getRegionsList():
     logger.info('Getting region list...')
     req = endlessGet('https://esi.tech.ccp.is/'
-                       'latest/universe/regions/?datasource=tranquility')
+                     'latest/universe/regions/?datasource=tranquility')
     assert req.status_code == 200
     return req.json()
 
@@ -194,7 +198,7 @@ def getRegionsList():
 def getStructuresList():
     logger.info('Getting structures list...')
     req = endlessGet('https://esi.tech.ccp.is/'
-                       'latest/universe/structures/?datasource=tranquility')
+                     'latest/universe/structures/?datasource=tranquility')
     assert req.status_code == 200
     res = req.json()
     logger.info("There are {} public structures.".format(len(res)))
@@ -205,7 +209,11 @@ def fetchMarketData(porders, pregionsStr, pregionNames):
     pageCounts = dict.fromkeys(pregionsStr, 0)
     with ThreadPoolExecutor(max_workers=20) as executor:
         for reg in pregionsStr:
-            executor.submit(getFirstPage, porders, pageCounts, pregionNames, reg)
+            executor.submit(getFirstPage,
+                            porders,
+                            pageCounts,
+                            pregionNames,
+                            reg)
             pass
 
     with ThreadPoolExecutor(max_workers=20) as executor:
@@ -216,7 +224,8 @@ def fetchMarketData(porders, pregionsStr, pregionNames):
                 import sys
                 sys.exit("{}, {}".format(reg, pageCounts[reg]))
             for page in range(1, pageCounts[reg]):
-                executor.submit(getOrders, porders[reg], pregionNames, reg, page+1)
+                executor.submit(getOrders, porders[reg],
+                                pregionNames, reg, page+1)
                 pass
             pass
         pass
@@ -235,6 +244,8 @@ ALTER TABLE publicStructuresInserting RENAME TO publicStructures;"""
 
 def fillStructuresTupleList(pstructs, ptuplelist):
     for key, struct in pstructs.items():
+        logger.debug('Constructing structure tuple: '
+                     '{} {}'.format(key, repr(struct)))
         ptuplelist.append((int(key), struct['name'], struct['solar_system_id']))
         pass
     pass
@@ -288,6 +299,7 @@ def filterOrders(pconn):
         logger.info("{} sell orders deleted because of not located in a public "
                     "structure.".format(rows))
 
+
 def dumpToDatabse(porders, pstructs, pregionsStr, pregionNames):
     logger.debug("Connecting to '{}'...".format(dbPath))
     conn = sqlite3.connect(dbPath)
@@ -301,11 +313,11 @@ def dumpToDatabse(porders, pstructs, pregionsStr, pregionNames):
                         'database'.format(pregionNames[reg], ordersCount))
             rows = insertDB(porders[reg], conn, int(reg))
             logger.debug('Region {}: {} inserted.'.format(pregionNames[reg],
-                                                        rows))
+                                                          rows))
             if ordersCount != rows:
-                logger.warning('Region {} has {} order(s) not inserted into the '
-                            'database.'.format(pregionNames[reg],
-                                                ordersCount - rows))
+                logger.warning('Region {} has {} order(s) not inserted into the'
+                               ' database.'.format(pregionNames[reg],
+                                                   ordersCount - rows))
                 pass
             pass
         pass
@@ -319,7 +331,7 @@ def dumpToDatabse(porders, pstructs, pregionsStr, pregionNames):
 def getStructureInfo(pstructs, pID, client):
     pstructs[pID] =\
         client.get('https://esi.tech.ccp.is/latest/universe/structures/' +
-                pID + '/?datasource=tranquility').json()
+                   pID + '/?datasource=tranquility').json()
     logger.info('Structure {} info received, its name is '
                 '{}.'.format(pID, pstructs[pID]['name']))
 
