@@ -32,6 +32,8 @@ req = requests.get('https://esi.tech.ccp.is/\
 latest/universe/regions/?datasource=tranquility')
 assert req.status_code == 200
 regionsInt = req.json()
+# Avoid SOLITUDE!!!
+regionsInt.remove(10000044)
 
 regionsStr = []
 for reg in regionsInt:
