@@ -193,8 +193,10 @@ for typeId in orders:
     #     continue
     #
 
-    # Avoid Small Arms (illegal)
-    if typeId == '9844':
+    # Avoid illegal items
+    if typeId in ['9844',  # small arms
+                  '3721'   # slaves
+                  ]:
         continue
 
     if orders[typeId]['lowest_sell'] > orders[typeId]['highest_buy']:
