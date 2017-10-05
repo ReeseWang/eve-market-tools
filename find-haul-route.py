@@ -192,6 +192,11 @@ for typeId in orders:
     # if len(orders[typeId][buy]) == 0:
     #     continue
     #
+
+    # Avoid Small Arms (illegal)
+    if typeId == '9844':
+        continue
+
     if orders[typeId]['lowest_sell'] > orders[typeId]['highest_buy']:
         continue
 
