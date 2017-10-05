@@ -4,7 +4,7 @@ import requests
 import sqlite3
 from concurrent.futures import ThreadPoolExecutor
 import logging
-import sde
+from sde import Database
 from datetime import datetime
 from esiauth import authedClient
 import time
@@ -380,5 +380,6 @@ class EVESyncWorker:
 
 if __name__ == '__main__':
     logger.setLevel(logging.DEBUG)
+    sde = Database()
     worker = EVESyncWorker()
     worker.main()

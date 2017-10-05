@@ -16,37 +16,38 @@ except Exception:
     pass
 
 logger = logging.getLogger()
-logger.setLevel(logging.DEBUG)
 
 
 class Database:
+    def execSQL(self, sql, data=None):
+        if data:
+            logger.debug("Executin SQL:\n" + sql +
+                         "\nWith Data:\n" + repr(data))
+            return self._conn.execute(sql, data)
+        else:
+            logger.debug("Executin SQL:\n" + sql)
+            return self._conn.execute(sql)
+
+    def execSQLScript(self, sql):
+        logger.debug("Executin SQL:\n" + sql)
+        return self._conn.executescript(sql)
+
     def _get(self, id, idcol, table, cols):
         assert isinstance(id, int)
         assert isinstance(idcol, str)
         assert isinstance(cols, str)
         assert isinstance(table, str)
-        c = self._conn.execute("SELECT {} FROM {} "
-                               "WHERE {}=?".format(cols, table, idcol), (id,))
-        assert c.arraysize == 1
-        return c.fetchone()
-
-    def _gethdd(self, id, idcol, table, cols):
-        assert isinstance(id, int)
-        assert isinstance(idcol, str)
-        assert isinstance(cols, str)
-        assert isinstance(table, str)
-        c = self._conn.execute("SELECT {} FROM hdd.{} "
-                               "WHERE {}=?".format(cols, table, idcol), (id,))
+        c = self.execSQL("SELECT {} FROM {} "
+                         "WHERE {}=?".format(cols, table, idcol), (id,))
         assert c.arraysize == 1
         return c.fetchone()
 
     def cacheTableToMemory(self, table):
-        c = self._conn.execute("SELECT sql FROM hdd.sqlite_master "
-                               "WHERE name = ? AND type = 'table';", (table,))
+        c = self.execSQL("SELECT sql FROM hdd.sqlite_master "
+                         "WHERE name = ? AND type = 'table';", (table,))
         sql = c.fetchone()[0]
-        c.execute(sql)
-        c.execute("INSERT INTO main.{0} SELECT * FROM hdd.{0};".format(table))
-        c.close()
+        self.execSQLScript(
+            sql + ";\nINSERT INTO main.{0} SELECT * FROM hdd.{0};".format(table))
         pass
 
     def _getStation(self, stationID, cols):
@@ -68,8 +69,8 @@ class Database:
         return self._getStation(stationID, cols='regionID')[0]
 
     def _cacheItemsPackVols(self):
-        c = self._conn.execute("SELECT typeID, volume FROM hdd.invVolumes;")
-        res = c.fetchall()
+        res = self.execSQL(
+            "SELECT typeID, volume FROM hdd.invVolumes;").fetchall()
         logger.info("Found {} item types "
                     "which has packaged volume.".format(len(res)))
         self.typesPackVol = {str(t[0]): t[1] for t in res}
@@ -112,7 +113,7 @@ class Database:
 
     def __init__(self):
         self._conn = sqlite3.connect(':memory:')
-        self._conn.execute("ATTACH './db/sde.sqlite' AS hdd;")
+        self.execSQL("ATTACH './db/sde.sqlite' AS hdd;")
 
         self.cacheTableToMemory('invTypes')
         self.cacheTableToMemory('invNames')
@@ -120,17 +121,22 @@ class Database:
         self.cacheTableToMemory('mapSolarSystems')
         self._cacheItemsPackVols()
 
-        self._conn.execute("DETACH hdd;")
+        self.execSQL("DETACH hdd;")
 
         marketDBPath = './db/market.sqlite'
         if os.path.exists(marketDBPath):
-            self._conn.execute("ATTACH '{}' AS hdd;".format(marketDBPath))
+            self.execSQL("ATTACH '{}' AS hdd;".format(marketDBPath))
 
             self.cacheTableToMemory('buyOrders')
             self.cacheTableToMemory('sellOrders')
             self.cacheTableToMemory('publicStructures')
 
-            self._conn.execute("DETACH hdd;")
+            self.execSQL("DETACH hdd;")
 
-            self._conn.execute(sqlqueries.hiSecMarketsView)
+            self.execSQL(sqlqueries.hiSecMarketsView)
             pass
+
+
+if __name__ == '__main__':
+    logger.setLevel(logging.DEBUG)
+    db = Database()
