@@ -157,7 +157,8 @@ def tradePairInfoStr(pair):
                       'To: \t\t{to_sec:.2f} {to_name}\t'
                       'Jumps: \t\t{jumps}',
                       'Profit/jump: \t{profit_per_jump:,.2f} ISK\t'
-                      'Profit limit factor: {profit_limit_factor}.'
+                      'Profit limit factor: {profit_limit_factor}',
+                      'Profit per 1000m3: {profit_per_1000m3:,.2f}'
                       ]).format_map(pair)
 
 
@@ -318,7 +319,8 @@ for typeId in orders:
                 ('profit_per_jump', ppj),
                 ('buy_orders', buyOrdersList),
                 ('sell_orders', sellOrdersList),
-                ('profit_limit_factor', profitLimFactor)
+                ('profit_limit_factor', profitLimFactor),
+                ('profit_per_1000m3', profit/itemVolume/availVolume*1000)
                 ])
             tradePairs.append(legitPair)
             with open('./result.txt', 'a') as outputText:
