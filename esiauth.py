@@ -45,7 +45,6 @@ class authedClient:
         pass
 
     def _refresh(self):
-        print('Token expired, refreshing...')
         postData = 'grant_type=refresh_token&refresh_token=' + self.tokenData['refresh_token']
         self.tokenData = self.postToGetToken(postData)
         pass
@@ -113,10 +112,10 @@ class authedClient:
             try:
                 response = requests.get(url, headers = self.headers)
                 response.raise_for_status()
-                if response.ok:
-                    return response
+                return response
             except requests.exceptions.HTTPError as error:
                 if 'expired' in response.text:
+                    print('Token expired, refreshing...')
                     self.getToken('refresh')
                     response = requests.get(url, headers = self.headers)
                     return response
