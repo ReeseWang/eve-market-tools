@@ -6,13 +6,13 @@ import requests
 from esiauth import authedClient
 import sde
 
-cargoVolumeLim = 20000
+cargoVolumeLim = 10000000
 budgetLim = 1e9
 highsecRoute = True
 minSecSta = 0.45
 maxSecSta = 1
 minMargin = 0.1
-minProfit = 5e6
+minProfit = 1e7
 taxRate = 1 - 0.02
 
 name = 'name'
