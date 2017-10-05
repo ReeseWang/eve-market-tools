@@ -5,8 +5,9 @@ import localcache
 import requests
 from esiauth import authedClient
 import sde
+from math import ceil
 
-cargoVolumeLim = 10000000
+cargoVolumeLim = 100000
 budgetLim = 1e9
 highsecRoute = True
 minSecSta = 0.45
@@ -249,7 +250,8 @@ for typeId in orders:
                         profitLimFactor = 'Budget'
                         availVolume -= 1
                         while(totalISK(buyOrdersList, availVolume) > budgetLim):
-                            availVolume -= 1
+                            availVolume -= ceil(availVolume * 0.01)
+                            assert availVolume > 0
                             pass
                         sellTotal = totalISK(sellOrdersList, availVolume)
                         buyTotal = totalISK(buyOrdersList, availVolume)
