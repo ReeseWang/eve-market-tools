@@ -7,7 +7,7 @@ from esiauth import authedClient
 import sde
 from math import ceil
 
-cargoVolumeLim = 100000
+cargoVolumeLim = 10000000
 budgetLim = 1e9
 highsecRoute = True
 minSecSta = 0.45
@@ -202,6 +202,10 @@ for typeId in orders:
     if orders[typeId]['lowest_sell'] > orders[typeId]['highest_buy']:
         continue
 
+    # Can't afford even one?
+    if budgetLim != 0 and orders[typeId]['lowest_sell'] > budgetLim:
+        pass
+
     for locSell in orders[typeId][sell]:
         for locBuy in orders[typeId][buy]:
             sellOrdersList = orders[typeId][sell][locSell]
@@ -253,12 +257,13 @@ for typeId in orders:
                         profit = taxRate * buyTotal - sellTotal
                     pass
                 if budgetLim != 0:
-                    if totalISK(buyOrdersList, availVolume) > budgetLim:
+                    if totalISK(sellOrdersList, availVolume) > budgetLim:
                         profitLimFactor = 'Budget'
-                        availVolume -= 1
-                        while(totalISK(buyOrdersList, availVolume) > budgetLim):
+                        while True:
                             availVolume -= ceil(availVolume * 0.01)
                             assert availVolume > 0
+                            if (totalISK(sellOrdersList, availVolume) < budgetLim):
+                                break
                             pass
                         sellTotal = totalISK(sellOrdersList, availVolume)
                         buyTotal = totalISK(buyOrdersList, availVolume)
