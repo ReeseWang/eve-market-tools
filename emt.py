@@ -25,16 +25,25 @@ def rangeString(r):
 
 class EMT(cmd.Cmd):
     def do_sellerlist(self, arg):
-        try:
-            self.typeID = int(arg)
-        except ValueError:
-            print('Please provide a legal type ID.')
-            return None
+        if arg:
+            try:
+                self.typeID = int(arg)
+            except ValueError:
+                print('Please provide a legal type ID.')
+                return
+        else:
+            if not self.typeID:
+                print("Please give me an item's type ID before querying.")
+                return
         name = self.db.getTypeName(self.typeID)
         if not name:
             print("I didn't find an item with this type ID.")
-            return None
+            return
         c = self.db.execSQL(sqlqueries.listSellOrders(), data=(self.typeID,))
+        li = c.fetchall()
+        if not li:  # No orders found
+            print('No orders found for {}.'.format(name))
+            return
         print(name.upper(), 'SELLER SUMMARY:\n')
         print(tabulate(
             [
@@ -50,7 +59,7 @@ class EMT(cmd.Cmd):
                     float(e[4]),  # Volume remain
                     e[5],  # Price
                     e[4]*e[5]  # Sum
-                ] for e in c.fetchall()
+                ] for e in li
             ],
             self.sellListHeaders,
             tablefmt='pipe',
@@ -59,16 +68,25 @@ class EMT(cmd.Cmd):
         ))
 
     def do_buyerlist(self, arg):
-        try:
-            self.typeID = int(arg)
-        except ValueError:
-            print('Please provide a legal type ID.')
-            return None
+        if arg:
+            try:
+                self.typeID = int(arg)
+            except ValueError:
+                print('Please provide a legal type ID.')
+                return
+        else:
+            if not self.typeID:
+                print("Please give me an item's type ID before querying.")
+                return
         name = self.db.getTypeName(self.typeID)
         if not name:
             print("I didn't find an item with this type ID.")
-            return None
+            return
         c = self.db.execSQL(sqlqueries.listBuyOrders(), data=(self.typeID,))
+        li = c.fetchall()
+        if not li:  # No orders found
+            print('No orders found for {}.'.format(name))
+            return
         print(name.upper(), 'BUYER SUMMARY:\n')
         print(tabulate(
             [
@@ -86,7 +104,7 @@ class EMT(cmd.Cmd):
                     float(e[6]),  # Min volume
                     e[5],  # Price
                     e[4]*e[5]  # Sum
-                ] for e in c.fetchall()
+                ] for e in li
             ],
             self.buyListHeaders,
             tablefmt='pipe',
@@ -104,6 +122,7 @@ class EMT(cmd.Cmd):
 
     def __init__(self):
         super().__init__()
+        self.typeID = None  # Avoiding some error
         self.logger = logging.getLogger(__name__)
         self.sellListHeaders = [
             'Location',
