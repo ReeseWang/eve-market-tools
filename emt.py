@@ -24,7 +24,7 @@ def rangeString(r):
 
 
 class EMT(cmd.Cmd):
-    def do_listseller(self, arg):
+    def do_sellerlist(self, arg):
         try:
             self.typeID = int(arg)
         except ValueError:
@@ -58,7 +58,7 @@ class EMT(cmd.Cmd):
             floatfmt=('', ',.0f', ',.2f', ',.2f')
         ))
 
-    def do_listbuyer(self, arg):
+    def do_buyerlist(self, arg):
         try:
             self.typeID = int(arg)
         except ValueError:
