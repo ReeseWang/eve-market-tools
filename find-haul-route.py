@@ -8,7 +8,7 @@ import sde
 from math import ceil
 
 cargoVolumeLim = 10000000
-budgetLim = 1e9
+budgetLim = 1e8
 highsecRoute = True
 minSecSta = 0.45
 maxSecSta = 1
@@ -148,6 +148,8 @@ def getRoute(src, dst):
 
 def tradePairInfoStr(pair):
     return '\n'.join(['Item: \t\t{item_name}',
+                      'Highest buy: \t{highest_buy:,.2f}\t'
+                      'Lowest sell: \t{lowest_sell:,.2f}',
                       'Profit: \t{profit:,.2f} ISK',
                       'Volume: \t{volume}\t'
                       'Cost: \t\t{cost:,.2f} ISK',
@@ -261,7 +263,7 @@ for typeId in orders:
                         profitLimFactor = 'Budget'
                         while True:
                             availVolume -= ceil(availVolume * 0.01)
-                            assert availVolume > 0
+                            assert availVolume >= 0
                             if (totalISK(sellOrdersList, availVolume) < budgetLim):
                                 break
                             pass
@@ -314,6 +316,8 @@ for typeId in orders:
                 print(errorMessage.args[0])
                 continue
             legitPair = dict([
+                ('highest_buy', buyOrdersList[0][price]),
+                ('lowest_sell', sellOrdersList[0][price]),
                 ('type_id', int(typeId)),
                 ('item_name', sde.getTypeName(int(typeId))),
                 ('volume', availVolume),
