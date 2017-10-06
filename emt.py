@@ -5,6 +5,7 @@ import sqlqueries
 from sde import Database
 from tornado.log import LogFormatter
 from tabulate import tabulate
+import cmd
 
 
 def rangeString(r):
@@ -21,7 +22,7 @@ def rangeString(r):
             return r.capitalize()
 
 
-class MarketAnalyzer:
+class EMT(cmd.Cmd):
     def printSellerList(self, typeID):
         assert isinstance(typeID, int)
         name = self.db.getTypeName(typeID)
@@ -79,6 +80,7 @@ class MarketAnalyzer:
         ))
 
     def __init__(self):
+        super().__init__()
         self.logger = logging.getLogger(__name__)
         self.sellListHeaders = [
             'Location',
@@ -105,6 +107,6 @@ if __name__ == '__main__':
     channel.setFormatter(LogFormatter())
     logging.basicConfig(handlers=[channel], level=logging.WARNING)
 
-    analyzer = MarketAnalyzer()
+    analyzer = EMT()
     analyzer.printSellerList(6677)
     analyzer.printBuyerList(34)
