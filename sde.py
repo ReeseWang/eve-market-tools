@@ -7,21 +7,19 @@ import os
 import sqlqueries
 from tornado.log import LogFormatter
 
-logger = logging.getLogger(__name__)
-
 
 class Database:
     def execSQL(self, sql, data=None):
         if data:
-            logger.debug("Executing SQL:\n" + sql +
-                         "\nWith Data:\n" + repr(data))
+            self.logger.debug("Executing SQL:\n" + sql +
+                              "\nWith Data:\n" + repr(data))
             return self._conn.execute(sql, data)
         else:
-            logger.debug("Executing SQL:\n" + sql)
+            self.logger.debug("Executing SQL:\n" + sql)
             return self._conn.execute(sql)
 
     def execSQLScript(self, sql):
-        logger.debug("Executing SQL:\n" + sql)
+        self.logger.debug("Executing SQL:\n" + sql)
         return self._conn.executescript(sql)
 
     def _get(self, id, idcol, table, cols):
@@ -64,8 +62,8 @@ class Database:
     def _cacheItemsPackVols(self):
         res = self.execSQL(
             "SELECT typeID, volume FROM hdd.invVolumes;").fetchall()
-        logger.info("Found {} item types "
-                    "which has packaged volume.".format(len(res)))
+        self.logger.info("Found {} item types "
+                         "which has packaged volume.".format(len(res)))
         self.typesPackVol = {str(t[0]): t[1] for t in res}
 
     def _getType(self, typeID, cols):
@@ -105,6 +103,8 @@ class Database:
                                     cols='security')[0]
 
     def __init__(self):
+        self.logger = logging.getLogger(__name__)
+
         self._conn = sqlite3.connect(':memory:')
         self.execSQL("ATTACH './db/sde.sqlite' AS hdd;")
 
