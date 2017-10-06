@@ -6,6 +6,7 @@ from sde import Database
 from tornado.log import LogFormatter
 from tabulate import tabulate
 import cmd
+import readline
 
 
 def rangeString(r):
@@ -23,10 +24,17 @@ def rangeString(r):
 
 
 class EMT(cmd.Cmd):
-    def printSellerList(self, typeID):
-        assert isinstance(typeID, int)
-        name = self.db.getTypeName(typeID)
-        c = self.db.execSQL(sqlqueries.listSellOrders(), data=(typeID,))
+    def do_listseller(self, arg):
+        try:
+            self.typeID = int(arg)
+        except ValueError:
+            print('Please provide a legal type ID.')
+            return None
+        name = self.db.getTypeName(self.typeID)
+        if not name:
+            print("I didn't find an item with this type ID.")
+            return None
+        c = self.db.execSQL(sqlqueries.listSellOrders(), data=(self.typeID,))
         print(name.upper(), 'SELLER SUMMARY:\n')
         print(tabulate(
             [
@@ -50,10 +58,17 @@ class EMT(cmd.Cmd):
             floatfmt=('', ',.0f', ',.2f', ',.2f')
         ))
 
-    def printBuyerList(self, typeID):
-        assert isinstance(typeID, int)
-        name = self.db.getTypeName(typeID)
-        c = self.db.execSQL(sqlqueries.listBuyOrders(), data=(typeID,))
+    def do_listbuyer(self, arg):
+        try:
+            self.typeID = int(arg)
+        except ValueError:
+            print('Please provide a legal type ID.')
+            return None
+        name = self.db.getTypeName(self.typeID)
+        if not name:
+            print("I didn't find an item with this type ID.")
+            return None
+        c = self.db.execSQL(sqlqueries.listBuyOrders(), data=(self.typeID,))
         print(name.upper(), 'BUYER SUMMARY:\n')
         print(tabulate(
             [
@@ -78,6 +93,14 @@ class EMT(cmd.Cmd):
             numalign='right',
             floatfmt=('', '', ',.0f', ',.0f', ',.2f', ',.2f')
         ))
+
+    def do_test(self, arg):
+        print(arg)
+
+    def do_EOF(self, arg):
+        print('Fly safe!')
+        import sys
+        sys.exit(0)
 
     def __init__(self):
         super().__init__()
@@ -105,8 +128,7 @@ if __name__ == '__main__':
     logger = logging.getLogger(__name__)
     channel = logging.StreamHandler()
     channel.setFormatter(LogFormatter())
-    logging.basicConfig(handlers=[channel], level=logging.WARNING)
+    logging.basicConfig(handlers=[channel], level=logging.INFO)
 
-    analyzer = EMT()
-    analyzer.printSellerList(6677)
-    analyzer.printBuyerList(34)
+    tool = EMT()
+    tool.cmdloop()
