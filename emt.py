@@ -7,6 +7,16 @@ from tornado.log import LogFormatter
 from tabulate import tabulate
 import cmd
 import readline
+import os
+import atexit
+
+
+def saveHistory(prevHistoryLen, filePath):
+    logger.debug('Entering saveHistory')
+    newHistoryLen = readline.get_history_length()
+    logger.debug('{} {}'.format(newHistoryLen, prevHistoryLen))
+    readline.set_history_length(1000)
+    readline.append_history_file(newHistoryLen - prevHistoryLen, filePath)
 
 
 def rangeString(r):
@@ -24,6 +34,8 @@ def rangeString(r):
 
 
 class EMT(cmd.Cmd):
+    prompt = 'EVE Online Market>'
+
     def do_sellerlist(self, arg):
         if arg:
             try:
@@ -147,7 +159,20 @@ if __name__ == '__main__':
     logger = logging.getLogger(__name__)
     channel = logging.StreamHandler()
     channel.setFormatter(LogFormatter())
-    logging.basicConfig(handlers=[channel], level=logging.INFO)
+    logging.basicConfig(handlers=[channel], level=logging.DEBUG)
+
+    historyFilePath = os.path.join(os.path.expanduser("~"), '.emt_history')
+
+    try:
+        readline.read_history_file(historyFilePath)
+        hlen = readline.get_history_length()
+        logger.debug('Got {} lines of command history.'.format(hlen))
+    except FileNotFoundError:
+        open(historyFilePath, 'wb').close()
+        logger.debug('Command history file not found, created a new file.')
+        hlen = 0
+
+    atexit.register(saveHistory, hlen, historyFilePath)
 
     tool = EMT()
     tool.cmdloop()
