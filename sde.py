@@ -4,7 +4,6 @@ import sqlite3
 import logging
 # from syncmarket import dbPath as marketDBPath
 import os
-import sqlqueries
 from tornado.log import LogFormatter
 
 
@@ -125,8 +124,6 @@ class Database:
             self.cacheTableToMemory('publicStructures')
 
             self.execSQL("DETACH hdd;")
-
-            self.execSQL(sqlqueries.hiSecMarketsView)
             pass
 
 
