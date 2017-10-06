@@ -47,16 +47,24 @@ class Database:
                          cols=cols)
 
     def getStationSecurity(self, stationID):
-        return self._getStation(stationID, cols='security')[0]
+        res = self.getStation(stationID, cols='security')
+        if res:
+            return res[0]
 
     def getStationSolarSystem(self, stationID):
-        return self._getStation(stationID, cols='solarSystemID')[0]
+        res = self._getStation(stationID, cols='solarSystemID')[0]
+        if res:
+            return res[0]
 
     def getStationConstellation(self, stationID):
-        return self._getStation(stationID, cols='constellationID')[0]
+        res = self.getStation(stationID, cols='constellationID')
+        if res:
+            return res[0]
 
     def getStationRegion(self, stationID):
-        return self._getStation(stationID, cols='regionID')[0]
+        res = self._getStation(stationID, cols='regionID')
+        if res:
+            return res[0]
 
     def _cacheItemsPackVols(self):
         res = self.execSQL(
@@ -82,8 +90,10 @@ class Database:
                                  cols='volume')[0]
 
     def getTypeName(self, typeID):
-        return self._getType(typeID,
-                             cols='typeName')[0]
+        res = self._getType(typeID,
+                            cols='typeName')
+        if res:
+            return res[0]
 
     def getItemName(self, itemID):
         return self._get(itemID,
