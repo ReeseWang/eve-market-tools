@@ -5,17 +5,9 @@ import logging
 # from syncmarket import dbPath as marketDBPath
 import os
 import sqlqueries
+from tornado.log import LogFormatter
 
-
-try:
-    # tornado is bundled with pretty formatter - try using it
-    from tornado.log import enable_pretty_logging
-    enable_pretty_logging()
-except Exception:
-    print("Pretty logging disabled.")
-    pass
-
-logger = logging.getLogger()
+logger = logging.getLogger(__name__)
 
 
 class Database:
@@ -47,7 +39,8 @@ class Database:
                          "WHERE name = ? AND type = 'table';", (table,))
         sql = c.fetchone()[0]
         self.execSQLScript(
-            sql + ";\nINSERT INTO main.{0} SELECT * FROM hdd.{0};".format(table))
+            sql +
+            ";\nINSERT INTO main.{0} SELECT * FROM hdd.{0};".format(table))
         pass
 
     def _getStation(self, stationID, cols):
@@ -138,5 +131,7 @@ class Database:
 
 
 if __name__ == '__main__':
-    logger.setLevel(logging.DEBUG)
+    channel = logging.StreamHandler()
+    channel.setFormatter(LogFormatter())
+    logging.basicConfig(handlers=[channel], level=logging.DEBUG)
     db = Database()
