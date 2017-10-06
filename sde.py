@@ -13,15 +13,15 @@ logger = logging.getLogger(__name__)
 class Database:
     def execSQL(self, sql, data=None):
         if data:
-            logger.debug("Executin SQL:\n" + sql +
+            logger.debug("Executing SQL:\n" + sql +
                          "\nWith Data:\n" + repr(data))
             return self._conn.execute(sql, data)
         else:
-            logger.debug("Executin SQL:\n" + sql)
+            logger.debug("Executing SQL:\n" + sql)
             return self._conn.execute(sql)
 
     def execSQLScript(self, sql):
-        logger.debug("Executin SQL:\n" + sql)
+        logger.debug("Executing SQL:\n" + sql)
         return self._conn.executescript(sql)
 
     def _get(self, id, idcol, table, cols):
