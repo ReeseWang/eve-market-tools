@@ -7,8 +7,36 @@ import urllib.parse
 import base64
 import requests
 import time
+from datetime import datetime
 import logging
 from tornado.log import LogFormatter
+
+# Dayly downtime is 11:00 - 11:15 UTC
+manStart = {
+    'hour': 11,
+    'minute': 0,
+    'second': 0,
+    'microsecond': 0
+}
+manEnd = {
+    'hour': 11,
+    'minute': 15,
+    'second': 0,
+    'microsecond': 0
+}
+
+
+def isServerDownTime():
+    now = datetime.utcnow()
+    start = now.replace(**manStart)
+    end = now.replace(**manEnd)
+    return start < now < end
+
+
+def howLongBeforeServerUp():
+    now = datetime.utcnow()
+    end = now.replace(**manEnd)
+    return (end - now).total_seconds
 
 
 class AuthedClient:
@@ -121,20 +149,28 @@ class AuthedClient:
                 response = requests.get(url, headers=self.headers)
                 response.raise_for_status()
                 return response
-            except requests.exceptions.HTTPError as error:
+            except Exception as error:
                 if 'expired' in response.text:
                     self.logger.debug('Token expired, refreshing...')
                     self.getToken('refresh')
                     response = requests.get(url, headers=self.headers)
                     return response
                 else:
-                    logging.error('Server not OK: {}: {} '
-                                  'retrying...'.format(response.status_code,
-                                                       response.text))
-                    time.sleep(5)
-            except Exception as error:
-                self.logging.error('Server not OK, retrying...')
-                time.sleep(5)
+                    if isServerDownTime():
+                        sec = howLongBeforeServerUp()
+                        logging.warning(
+                            'EVE Online server cluster shutdown '
+                            'daily at 11:00 - 11:15 UTC, will retry '
+                            'after the downtime ends ({} sec '
+                            'remaining).'.format(round(sec))
+                        )
+                        time.sleep(sec)
+                    else:
+                        logging.error(
+                            'Server not OK: {}: {} . Will retry after 5 '
+                            'seconds...'.format(
+                                response.status_code, response.text))
+                        time.sleep(5)
 
     def post(self, url, data=None):
         try:
