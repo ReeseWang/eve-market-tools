@@ -127,8 +127,8 @@ class EVESyncWorker:
                 order['price'],
                 order['range'],
                 int(order['duration']),
-                int(datetime.strptime(order['issued'],
-                                      '%Y-%m-%dT%H:%M:%SZ').timestamp())
+                datetime.strptime(order['issued'],
+                                  '%Y-%m-%dT%H:%M:%SZ')
                 )
 
     def sellOrderTuple(self, order, reg):
@@ -141,8 +141,8 @@ class EVESyncWorker:
                 int(order['volume_remain']),
                 order['price'],
                 int(order['duration']),
-                int(datetime.strptime(order['issued'],
-                                      '%Y-%m-%dT%H:%M:%SZ').timestamp())
+                datetime.strptime(order['issued'],
+                                  '%Y-%m-%dT%H:%M:%SZ')
                 )
 
     def fillOrderTupleLists(self, pordersList, preg):
@@ -190,11 +190,15 @@ class EVESyncWorker:
         # return req.json(), int(req.headers['x-pages'])
         self.fillOrderTupleLists(res.json(), int(preg))
         self.pageCounts[preg] = int(res.headers['x-pages'])
+        lastMod = res.headers['last-modified']
+        modDelta = datetime.utcnow() - datetime.strptime(lastMod,
+                                                         '%a, %d %b %Y '
+                                                         '%H:%M:%S GMT')
         logger.info('Got the first page of orders in {0}. {0} has {1} '
-                    'pages of orders. Last modified '
-                    'at {2}.'.format(self.regionNames[preg],
-                                     self.pageCounts[preg],
-                                     res.headers['last-modified']))
+                    'pages of orders. Last modified {2} second(s)'
+                    'ago.'.format(self.regionNames[preg],
+                                  self.pageCounts[preg],
+                                  round(modDelta.total_seconds())))
         # insertDB(req.json(), int(reg))
 
     def getRegionsList(self):
