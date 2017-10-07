@@ -73,7 +73,8 @@ class EVESyncWorker:
             "range TEXT NOT NULL CHECK (range IN ('station', 'region', ",
             "'solarsystem', '1', '2', '3', '4', '5', '10', '20', '30', '40')),",
             "duration INTEGER NOT NULL CHECK (duration > 0),",
-            "issued INTEGER NOT NULL);"]))
+            "issued INTEGER NOT NULL,",
+            "updated INTEGER NOT NULL);"]))
         self.execSQL("DROP TABLE IF EXISTS sellOrdersInserting;")
         self.execSQL('\n'.join([
             "CREATE TABLE sellOrdersInserting (",
@@ -85,11 +86,12 @@ class EVESyncWorker:
             "volume_remain INTEGER NOT NULL CHECK (volume_remain > 0),",
             "price REAL NOT NULL CHECK (price > 0),",
             "duration INTEGER NOT NULL CHECK (duration > 0),",
+            "issued INTEGER NOT NULL,",
             # "volume_total INTEGER NOT NULL,",
             # "volume_remain INTEGER NOT NULL,",
             # "price REAL NOT NULL,",
             # "duration INTEGER NOT NULL,",
-            "issued INTEGER NOT NULL);"]))
+            "updated INTEGER NOT NULL);"]))
         self.execSQL("DROP TABLE IF EXISTS publicStructuresInserting;")
         self.execSQL('\n'.join([
             "CREATE TABLE publicStructuresInserting (",
@@ -106,7 +108,7 @@ class EVESyncWorker:
         # conn.commit()
         # conn.close()
 
-    def buyOrderTuple(self, order, reg):
+    def buyOrderTuple(self, order, reg, updateTime):
         assert isinstance(reg, int)
         return (int(order['order_id']),
                 int(order['type_id']),
@@ -119,10 +121,11 @@ class EVESyncWorker:
                 order['range'],
                 int(order['duration']),
                 datetime.strptime(order['issued'],
-                                  '%Y-%m-%dT%H:%M:%SZ')
+                                  '%Y-%m-%dT%H:%M:%SZ'),
+                updateTime
                 )
 
-    def sellOrderTuple(self, order, reg):
+    def sellOrderTuple(self, order, reg, updateTime):
         assert isinstance(reg, int)
         return (int(order['order_id']),
                 int(order['type_id']),
@@ -133,15 +136,20 @@ class EVESyncWorker:
                 order['price'],
                 int(order['duration']),
                 datetime.strptime(order['issued'],
-                                  '%Y-%m-%dT%H:%M:%SZ')
+                                  '%Y-%m-%dT%H:%M:%SZ'),
+                updateTime
                 )
 
-    def fillOrderTupleLists(self, pordersList, preg):
+    def fillOrderTupleLists(self, pordersList, preg, updateTime):
         for order in pordersList:
             if order['is_buy_order']:
-                self.buyTuplesList.append(self.buyOrderTuple(order, preg))
+                self.buyTuplesList.append(self.buyOrderTuple(order,
+                                                             preg,
+                                                             updateTime))
             else:
-                self.sellTuplesList.append(self.sellOrderTuple(order, preg))
+                self.sellTuplesList.append(self.sellOrderTuple(order,
+                                                               preg,
+                                                               updateTime))
 
     def execSQLMany(self, sql, data):
         self.logger.debug("Executing SQL:\n" + sql)
@@ -153,12 +161,12 @@ class EVESyncWorker:
         if(self.buyTuplesList):
             rows += self.execSQLMany("INSERT OR IGNORE INTO "
                                      "buyOrdersInserting VALUES "
-                                     "({});".format(','.join(11*'?')),
+                                     "({});".format(','.join(12*'?')),
                                      self.buyTuplesList)
         if(self.sellTuplesList):
             rows += self.execSQLMany("INSERT OR IGNORE INTO "
                                      "sellOrdersInserting VALUES "
-                                     "({});".format(','.join(9*'?')),
+                                     "({});".format(','.join(10*'?')),
                                      self.sellTuplesList)
         return rows
 
@@ -167,14 +175,14 @@ class EVESyncWorker:
                               preg + '/orders/?datasource=tranquility' +
                               '&order_type=all&page=' + str(ppage))
         assert res.status_code == 200
-        self.fillOrderTupleLists(res.json(), int(preg))
         expires = datetime.strptime(res.headers['expires'],
                                     self.headerTimeFormat)
-        if self.expireTime > expires:  # Update the expire time earlier
+        if self.expireTime > expires:  # Update the expire time if earlier
             self.expireTime = expires
         lastMod = datetime.strptime(res.headers['last-modified'],
                                     self.headerTimeFormat)
         modDelta = datetime.utcnow() - lastMod
+        self.fillOrderTupleLists(res.json(), int(preg), lastMod)
         self.logger.info('Got page {0}/{1} of orders in {2}. '
                          'Last modified {3} second(s) '
                          'ago.'.format(ppage,
