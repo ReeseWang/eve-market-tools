@@ -58,6 +58,7 @@ SELECT
     range,
     duration,
     issued,
+    updated,
     {secMarket}.stationName AS stationName,
     {secMarket}.solarSystemID AS solarSystemID,
     {secMarket}.constellationID AS constellationID,
@@ -88,6 +89,7 @@ SELECT
     price,
     duration,
     issued,
+    updated,
     {secMarket}.stationName AS stationName,
     {secMarket}.solarSystemID AS solarSystemID,
     {secMarket}.constellationID AS constellationID,
@@ -120,7 +122,9 @@ def listSellOrders():
     constellationName,
     stationName,
     volume_remain,
-    price
+    price,
+    updated,
+    issued
 FROM
     {table}
 WHERE
@@ -140,7 +144,9 @@ def listBuyOrders():
     volume_remain,
     price,
     min_volume,
-    range
+    range,
+    updated,
+    issued
 FROM
     {table}
 WHERE

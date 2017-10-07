@@ -9,6 +9,33 @@ import cmd
 import readline
 import os
 import atexit
+from datetime import datetime
+
+
+def timefmt(timestamp, level=3):
+    time = datetime.strptime(
+        timestamp,
+        '%Y-%m-%d %H:%M:%S'
+    )
+    secs = int((datetime.utcnow() -
+                time).total_seconds())
+    d, h, m, s = '', '', '', ''
+    if secs >= 86400 and level >= 3:
+        d = '{}D '.format(secs // 86400)
+        secs %= 86400
+        h, m = '00:', '00'
+        pass
+    if secs > 3600 and level >= 2:
+        h = '{:02d}:'.format(secs // 3600)
+        secs %= 3600
+        m = '00'
+        pass
+    if secs > 60 and level >= 1:
+        m = '{:02d}'.format(secs // 60)
+        secs %= 60
+        pass
+    s = ':{:02d}'.format(secs)
+    return (d + h + m + s)
 
 
 def saveHistory(prevHistoryLen, filePath):
@@ -70,7 +97,9 @@ class EMT(cmd.Cmd):
                     ),
                     float(e[4]),  # Volume remain
                     e[5],  # Price
-                    e[4]*e[5]  # Sum
+                    e[4]*e[5],  # Sum
+                    timefmt(e[6], 2),  # Updated
+                    timefmt(e[7], 3)  # Issued
                 ] for e in li
             ],
             self.sellListHeaders,
@@ -115,7 +144,9 @@ class EMT(cmd.Cmd):
                     float(e[4]),  # Volume remain
                     float(e[6]),  # Min volume
                     e[5],  # Price
-                    e[4]*e[5]  # Sum
+                    e[4]*e[5],  # Sum
+                    timefmt(e[8], 2),  # Updated
+                    timefmt(e[9], 3)  # Issued
                 ] for e in li
             ],
             self.buyListHeaders,
@@ -140,7 +171,9 @@ class EMT(cmd.Cmd):
             'Location',
             'Remaining',
             'Ask price / ISK',
-            'Sum / ISK'
+            'Sum / ISK',
+            'Updated ago',
+            'Issued ago'
         ]
         self.buyListHeaders = [
             'Location',
@@ -148,7 +181,9 @@ class EMT(cmd.Cmd):
             'Remaining',
             'Min volume',
             'Bid price / ISK',
-            'Sum / ISK'
+            'Sum / ISK',
+            'Updated ago',
+            'Issued ago'
         ]
         self.db = Database()
         self.db.execSQLScript(sqlqueries.createSecFilteredMarketsView(0.45, 1))
