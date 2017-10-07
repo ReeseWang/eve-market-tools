@@ -155,6 +155,8 @@ class AuthedClient:
                     self.getToken('refresh')
                     response = requests.get(url, headers=self.headers)
                     return response
+                if 'Forbidden' in response.text:
+                    return
                 else:
                     if isServerDownTime():
                         sec = howLongBeforeServerUp()
