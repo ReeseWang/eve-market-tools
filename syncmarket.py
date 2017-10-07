@@ -168,10 +168,13 @@ class EVESyncWorker:
                               '&order_type=all&page=' + str(ppage))
         assert res.status_code == 200
         self.fillOrderTupleLists(res.json(), int(preg))
-        lastMod = res.headers['last-modified']
-        modDelta = datetime.utcnow() - datetime.strptime(lastMod,
-                                                         '%a, %d %b %Y '
-                                                         '%H:%M:%S GMT')
+        expires = datetime.strptime(res.headers['expires'],
+                                    self.headerTimeFormat)
+        if self.expireTime > expires:  # Update the expire time earlier
+            self.expireTime = expires
+        lastMod = datetime.strptime(res.headers['last-modified'],
+                                    self.headerTimeFormat)
+        modDelta = datetime.utcnow() - lastMod
         self.logger.info('Got page {0}/{1} of orders in {2}. '
                          'Last modified {3} second(s) '
                          'ago.'.format(ppage,
@@ -361,10 +364,24 @@ class EVESyncWorker:
         self.logger = logging.getLogger(__name__)
         self.debug = debug
         self.singleThread = singleThread
+
+        self.expireTime = datetime.utcnow().max
+        self.headerTimeFormat = '%a, %d %b %Y %H:%M:%S GMT'
         self.buyTuplesList = []
         self.sellTuplesList = []
         self.structTuplesList = []
         self.client = authedClient()
+
+    def sleepUntilFirstExpire(self):
+        sleepSec = (self.expireTime - datetime.utcnow()).total_seconds()
+        if sleepSec < 0:
+            sleepSec = 0
+        self.logger.debug('Work done, according to data expire time '
+                          'provided by server, I will rest for {} '
+                          'seconds...'.format(round(sleepSec)))
+        time.sleep(sleepSec)
+        self.expireTime = datetime.utcnow().max
+        pass
 
     def main(self):
         try:
@@ -375,8 +392,7 @@ class EVESyncWorker:
                 self.fetchStructuresInfo()
                 self.fetchMarketData()
                 self.dumpToDatabse()
-                self.logger.debug('Work done, will rest for 5 min...')
-                time.sleep(60)
+                self.sleepUntilFirstExpire()
                 pass
         except KeyboardInterrupt:
             self.logger.debug('KeyboardInterrupt caught, exiting gracefully...')
