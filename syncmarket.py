@@ -370,12 +370,17 @@ class EVESyncWorker:
         self.client = authedClient()
 
     def main(self):
-        self.getRegionsList()
-        self.getStructuresList()
+        try:
+            while True:
+                self.getRegionsList()
+                self.getStructuresList()
 
-        self.fetchStructuresInfo()
-        self.fetchMarketData()
-        self.dumpToDatabse()
+                self.fetchStructuresInfo()
+                self.fetchMarketData()
+                self.dumpToDatabse()
+                pass
+        except KeyboardInterrupt:
+            logger.debug('KeyboardInterrupt caught, exiting gracefully...')
 
 
 if __name__ == '__main__':
