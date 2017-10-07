@@ -206,7 +206,8 @@ class EVESyncWorker:
         # You definitely don't want to touch region SOLITUDE
         self.regionsInt.remove(10000044)
         # For test
-        # self.regionsInt = self.regionsInt[0:3]
+        if self.debug:
+            self.regionsInt = self.regionsInt[0:2]
         self.regionsStr = []
         for reg in self.regionsInt:
             self.regionsStr.append(str(reg))
@@ -226,15 +227,18 @@ class EVESyncWorker:
         logger.info("There are {} public structures.".format(len(res)))
         self.structuresInt = res
         # For test
-        # self.structuresInt = self.structuresInt[0:10]
+        if self.debug:
+            self.structuresInt = self.structuresInt[0:10]
 
     def fetchMarketData(self):
         self.pageCounts = dict.fromkeys(self.regionsStr, 0)
         with ThreadPoolExecutor(max_workers=20) as executor:
             for reg in self.regionsStr:
                 # Single thread test
-                # self.getFirstPage(reg)
-                executor.submit(self.getFirstPage, reg)
+                if self.singleThread:
+                    self.getFirstPage(reg)
+                else:
+                    executor.submit(self.getFirstPage, reg)
                 pass
 
         with ThreadPoolExecutor(max_workers=20) as executor:
@@ -246,8 +250,10 @@ class EVESyncWorker:
                     sys.exit("{}, {}".format(reg, self.pageCounts[reg]))
                 for page in range(1, self.pageCounts[reg]):
                     # Single thread test
-                    # self.getOrders(reg, page+1)
-                    executor.submit(self.getOrders, reg, page+1)
+                    if self.singleThread:
+                        self.getOrders(reg, page+1)
+                    else:
+                        executor.submit(self.getOrders, reg, page+1)
                     pass
                 pass
             pass
@@ -363,7 +369,9 @@ class EVESyncWorker:
                                 len(self.structuresInt) -
                                 len(self.structTuplesList)))
 
-    def __init__(self):
+    def __init__(self, debug=False, singleThread=False):
+        self.debug = debug
+        self.singleThread = singleThread
         self.buyTuplesList = []
         self.sellTuplesList = []
         self.structTuplesList = []
@@ -378,13 +386,17 @@ class EVESyncWorker:
                 self.fetchStructuresInfo()
                 self.fetchMarketData()
                 self.dumpToDatabse()
+                logger.debug('Work done, will rest for 5 min...')
+                time.sleep(60)
                 pass
         except KeyboardInterrupt:
             logger.debug('KeyboardInterrupt caught, exiting gracefully...')
+            import sys
+            sys.exit(0)
 
 
 if __name__ == '__main__':
     logger.setLevel(logging.DEBUG)
     sde = Database()
-    worker = EVESyncWorker()
+    worker = EVESyncWorker(debug=True)
     worker.main()
