@@ -73,8 +73,8 @@ class EVESyncWorker:
             "range TEXT NOT NULL CHECK (range IN ('station', 'region', ",
             "'solarsystem', '1', '2', '3', '4', '5', '10', '20', '30', '40')),",
             "duration INTEGER NOT NULL CHECK (duration > 0),",
-            "issued INTEGER NOT NULL,",
-            "updated INTEGER NOT NULL);"]))
+            "issued timestamp NOT NULL,",
+            "updated timestamp NOT NULL);"]))
         self.execSQL("DROP TABLE IF EXISTS sellOrdersInserting;")
         self.execSQL('\n'.join([
             "CREATE TABLE sellOrdersInserting (",
@@ -86,12 +86,12 @@ class EVESyncWorker:
             "volume_remain INTEGER NOT NULL CHECK (volume_remain > 0),",
             "price REAL NOT NULL CHECK (price > 0),",
             "duration INTEGER NOT NULL CHECK (duration > 0),",
-            "issued INTEGER NOT NULL,",
+            "issued timestamp NOT NULL,",
             # "volume_total INTEGER NOT NULL,",
             # "volume_remain INTEGER NOT NULL,",
             # "price REAL NOT NULL,",
             # "duration INTEGER NOT NULL,",
-            "updated INTEGER NOT NULL);"]))
+            "updated timestamp NOT NULL);"]))
         self.execSQL("DROP TABLE IF EXISTS publicStructuresInserting;")
         self.execSQL('\n'.join([
             "CREATE TABLE publicStructuresInserting (",
@@ -415,5 +415,5 @@ if __name__ == '__main__':
     logging.basicConfig(handlers=[channel], level=logging.DEBUG)
 
     sde = Database()
-    worker = EVESyncWorker(debug=True)
+    worker = EVESyncWorker(debug=False)
     worker.main()
