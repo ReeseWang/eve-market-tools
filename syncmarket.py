@@ -171,34 +171,27 @@ class EVESyncWorker:
                                      self.sellTuplesList)
         return rows
 
-    def getOrders(self, preg, ppage):
-        req = self.client.get('https://esi.tech.ccp.is/latest/markets/' +
-                              preg + '/orders/?datasource=tranquility' +
-                              '&order_type=all&page=' + str(ppage))
-        assert req.status_code == 200
-        self.fillOrderTupleLists(req.json(), int(preg))
-        # insertDB(req.json(), int(reg))
-        logger.info('Region {} Page {} received.'.format(self.regionNames[preg],
-                                                         ppage))
-        pass
-
-    def getFirstPage(self, preg):
+    def getPageOfOrder(self, preg, ppage):
         res = self.client.get('https://esi.tech.ccp.is/latest/markets/' +
                               preg + '/orders/?datasource=tranquility' +
-                              '&order_type=all&page=1')
+                              '&order_type=all&page=' + str(ppage))
         assert res.status_code == 200
-        # return req.json(), int(req.headers['x-pages'])
         self.fillOrderTupleLists(res.json(), int(preg))
-        self.pageCounts[preg] = int(res.headers['x-pages'])
         lastMod = res.headers['last-modified']
         modDelta = datetime.utcnow() - datetime.strptime(lastMod,
                                                          '%a, %d %b %Y '
                                                          '%H:%M:%S GMT')
-        logger.info('Got the first page of orders in {0}. {0} has {1} '
-                    'pages of orders. Last modified {2} second(s)'
-                    'ago.'.format(self.regionNames[preg],
+        logger.info('Got page {0}/{1} of orders in {2}. '
+                    'Last modified {3} second(s) '
+                    'ago.'.format(ppage,
                                   self.pageCounts[preg],
+                                  self.regionNames[preg],
                                   round(modDelta.total_seconds())))
+        if ppage == 1:
+            return int(res.headers['x-pages'])
+
+    def getFirstPage(self, preg):
+        self.pageCounts[preg] = self.getPageOfOrder(preg, 1)
         # insertDB(req.json(), int(reg))
 
     def getRegionsList(self):
@@ -255,9 +248,9 @@ class EVESyncWorker:
                 for page in range(1, self.pageCounts[reg]):
                     # Single thread test
                     if self.singleThread:
-                        self.getOrders(reg, page+1)
+                        self.getPageOfOrder(reg, page+1)
                     else:
-                        executor.submit(self.getOrders, reg, page+1)
+                        executor.submit(self.getPageOfOrder, reg, page+1)
                     pass
                 pass
             pass
