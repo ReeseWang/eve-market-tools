@@ -11,7 +11,7 @@ import logging
 from tornado.log import LogFormatter
 
 
-class authedClient:
+class AuthedClient:
 
     def __init__(self, tokenFilePath='./secret.bin'):
         self.logger = logging.getLogger(__name__)
@@ -161,9 +161,9 @@ class authedClient:
 if __name__ == '__main__':
     import sys
     if len(sys.argv) == 2:
-        client = authedClient(tokenFilePath=sys.argv[1])
+        client = AuthedClient(tokenFilePath=sys.argv[1])
     else:
-        client = authedClient()
+        client = AuthedClient()
 
     logger = logging.getLogger(__name__)
     channel = logging.StreamHandler()

@@ -7,7 +7,7 @@ import logging
 from tornado.log import LogFormatter
 from sde import Database
 from datetime import datetime
-from esiauth import authedClient
+from esiauth import AuthedClient
 import time
 
 dbPath = './db/market.sqlite'
@@ -370,7 +370,7 @@ class EVESyncWorker:
         self.buyTuplesList = []
         self.sellTuplesList = []
         self.structTuplesList = []
-        self.client = authedClient()
+        self.client = AuthedClient()
 
     def sleepUntilFirstExpire(self):
         sleepSec = (self.expireTime - datetime.utcnow()).total_seconds()
