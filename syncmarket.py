@@ -228,7 +228,7 @@ class EVESyncWorker:
                               'datasource=tranquility')
         assert res.status_code == 200
         res = res.json()
-        logger.info("There are {} public structures.".format(len(res)))
+        logger.debug("There are {} public structures.".format(len(res)))
         self.structuresInt = res
         # For test
         if self.debug:
