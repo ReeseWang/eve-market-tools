@@ -4,14 +4,17 @@ import os
 import pickle
 import secret
 import urllib.parse
-import json
 import base64
 import requests
 import time
+import logging
+from tornado.log import LogFormatter
+
 
 class authedClient:
 
-    def __init__(self, tokenFilePath = './secret.bin'):
+    def __init__(self, tokenFilePath='./secret.bin'):
+        self.logger = logging.getLogger(__name__)
         self.tokenFilePath = tokenFilePath
         if not os.path.exists(self.tokenFilePath):
             print('Token file not found, starting login process...')
@@ -23,20 +26,20 @@ class authedClient:
 
     def updateAuthHeader(self):
         self.headers = {
-                'Authorization': self.tokenData['token_type'] + ' ' + \
+                'Authorization': self.tokenData['token_type'] + ' ' +
                         self.tokenData['access_token']
                 }
         pass
 
     def _login(self):
         loginUrlBase = 'https://login.eveonline.com/oauth/authorize/?'
-        loginUrlPara = { 'response_type': 'code',
-                'redirect_uri': secret.callbackUrl,
-                'client_id': secret.clientID,
-                'scope': ' '.join(secret.scopes)
-                }
+        loginUrlPara = {'response_type': 'code',
+                        'redirect_uri': secret.callbackUrl,
+                        'client_id': secret.clientID,
+                        'scope': ' '.join(secret.scopes)
+                        }
         loginUrl = loginUrlBase + \
-                urllib.parse.urlencode(loginUrlPara, quote_via=urllib.parse.quote)
+            urllib.parse.urlencode(loginUrlPara, quote_via=urllib.parse.quote)
         print('Copy following URL to browser and login:\n' + loginUrl)
         veriCode = input('Paste veryfication code here: ')
 
@@ -45,7 +48,8 @@ class authedClient:
         pass
 
     def _refresh(self):
-        postData = 'grant_type=refresh_token&refresh_token=' + self.tokenData['refresh_token']
+        postData = 'grant_type=refresh_token&refresh_token=' + \
+            self.tokenData['refresh_token']
         self.tokenData = self.postToGetToken(postData)
         pass
 
@@ -57,7 +61,7 @@ class authedClient:
         elif source == 'file':
             with open(self.tokenFilePath, 'rb') as self.tokenFile:
                 self.tokenData = pickle.load(self.tokenFile)
-                print('Loaded token from file.')
+                self.logger.debug('Loaded token from file.')
                 pass
             pass
         elif source == 'login':
@@ -72,7 +76,8 @@ class authedClient:
                         base64.b64encode(
                                 (secret.clientID +
                                     ':' +
-                                    secret.secretKey).encode('utf-8')).decode('utf-8')
+                                    secret.secretKey
+                                 ).encode('utf-8')).decode('utf-8')
         postHeaders = {
                 'Authorization': headerAuthString,
                 'Content-Type': 'application/x-www-form-urlencoded',
@@ -80,13 +85,15 @@ class authedClient:
                 }
 
         response = requests.post('https://login.eveonline.com/oauth/token',
-                headers = postHeaders,
-                data = postData)
+                                 headers=postHeaders,
+                                 data=postData)
 
         if response.ok:
             return response.json()
         else:
-            sys.exit('Could not get token. {}'.format(self.genErrorString(response)))
+            sys.exit(
+                'Could not get token. {}'.format(
+                    self.genErrorString(response)))
             pass
         pass
 
@@ -97,42 +104,47 @@ class authedClient:
                 response.json()['error_description']))
 
     def writeTokenFile(self):
-        print('Successfully got token, writing to file...')
+        self.logger.debug('Successfully got token, writing to file...')
         if os.path.exists(self.tokenFilePath):
             os.rename(self.tokenFilePath, self.tokenFilePath + '.bak')
-            print('Old file found and backed up.')
+            self.logger.debug('Old file found and backed up.')
         with open(self.tokenFilePath, 'wb') as self.tokenFile:
             pickle.dump(self.tokenData, self.tokenFile, pickle.HIGHEST_PROTOCOL)
             pass
-        print('Done.')
+        self.logger.debug('Done.')
         pass
 
     def get(self, url):
+        self.logger.debug('Getting ' + url + ' ...')
         while True:
             try:
-                response = requests.get(url, headers = self.headers)
+                response = requests.get(url, headers=self.headers)
                 response.raise_for_status()
                 return response
             except requests.exceptions.HTTPError as error:
                 if 'expired' in response.text:
-                    print('Token expired, refreshing...')
+                    self.logger.debug('Token expired, refreshing...')
                     self.getToken('refresh')
-                    response = requests.get(url, headers = self.headers)
+                    response = requests.get(url, headers=self.headers)
                     return response
                 else:
+                    logging.error('Server not OK: {}: {} '
+                                  'retrying...'.format(response.status_code,
+                                                       response.text))
                     time.sleep(5)
             except Exception as error:
+                self.logging.error('Server not OK, retrying...')
                 time.sleep(5)
 
     def post(self, url, data=None):
         try:
-            response = requests.post(url, data, headers = self.headers)
+            response = requests.post(url, data, headers=self.headers)
             response.raise_for_status()
             return response
         except requests.exceptions.HTTPError as error:
             if 'expired' in response.text:
                 self.getToken('refresh')
-                response = requests.get(url, headers = self.headers)
+                response = requests.get(url, headers=self.headers)
                 return response
             else:
                 import sys
@@ -145,8 +157,19 @@ class authedClient:
         cha = self.get('https://login.eveonline.com/oauth/verify').json()
         return cha['CharacterID']
 
+
 if __name__ == '__main__':
     import sys
-    client = authedClient(tokenFilePath = sys.argv[1])
-    print('Auth successful, got character ID: {}.'.format(client.getCharacterID()))
+    if len(sys.argv) == 2:
+        client = authedClient(tokenFilePath=sys.argv[1])
+    else:
+        client = authedClient()
 
+    logger = logging.getLogger(__name__)
+    channel = logging.StreamHandler()
+    channel.setFormatter(LogFormatter())
+    logging.basicConfig(handlers=[channel], level=logging.DEBUG)
+
+    print('Auth successful, got character ID: '
+          '{}.'.format(client.getCharacterID()))
+    print('Access token: ' + client.tokenData['access_token'])
