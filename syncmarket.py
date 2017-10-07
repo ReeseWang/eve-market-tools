@@ -4,22 +4,13 @@ import requests
 import sqlite3
 from concurrent.futures import ThreadPoolExecutor
 import logging
+from tornado.log import LogFormatter
 from sde import Database
 from datetime import datetime
 from esiauth import authedClient
 import time
 
 dbPath = './db/market.sqlite'
-
-try:
-    # tornado is bundled with pretty formatter - try using it
-    from tornado.log import enable_pretty_logging
-    enable_pretty_logging()
-except Exception:
-    print("Pretty logging disabled.")
-    pass
-
-logger = logging.getLogger()
 
 
 class BuyOrder:
@@ -61,12 +52,12 @@ class EVESyncWorker:
                 time.sleep(5)
 
     def execSQL(self, sql):
-        logger.debug("Executing SQL:\n" + sql)
+        self.logger.debug("Executing SQL:\n" + sql)
         c = self.conn.execute(sql)
         return c.rowcount
 
     def initDB(self):
-        # logger.debug("Connecting to '{}'...".format(dbPath))
+        # self.logger.debug("Connecting to '{}'...".format(dbPath))
         # conn = sqlite3.connect(dbPath)
         self.execSQL("DROP TABLE IF EXISTS buyOrdersInserting;")
         self.execSQL('\n'.join([
@@ -153,7 +144,7 @@ class EVESyncWorker:
                 self.sellTuplesList.append(self.sellOrderTuple(order, preg))
 
     def execSQLMany(self, sql, data):
-        logger.debug("Executing SQL:\n" + sql)
+        self.logger.debug("Executing SQL:\n" + sql)
         c = self.conn.executemany(sql, data)
         return c.rowcount
 
@@ -181,12 +172,12 @@ class EVESyncWorker:
         modDelta = datetime.utcnow() - datetime.strptime(lastMod,
                                                          '%a, %d %b %Y '
                                                          '%H:%M:%S GMT')
-        logger.info('Got page {0}/{1} of orders in {2}. '
-                    'Last modified {3} second(s) '
-                    'ago.'.format(ppage,
-                                  self.pageCounts[preg],
-                                  self.regionNames[preg],
-                                  round(modDelta.total_seconds())))
+        self.logger.info('Got page {0}/{1} of orders in {2}. '
+                         'Last modified {3} second(s) '
+                         'ago.'.format(ppage,
+                                       self.pageCounts[preg],
+                                       self.regionNames[preg],
+                                       round(modDelta.total_seconds())))
         if ppage == 1:
             return int(res.headers['x-pages'])
 
@@ -195,7 +186,7 @@ class EVESyncWorker:
         # insertDB(req.json(), int(reg))
 
     def getRegionsList(self):
-        logger.info('Getting region list...')
+        self.logger.info('Getting region list...')
         res = self.client.get('https://esi.tech.ccp.is/'
                               'latest/universe/regions/?datasource=tranquility')
         assert res.status_code == 200
@@ -215,13 +206,13 @@ class EVESyncWorker:
             self.regionNames[str(reg)] = sde.getItemName(reg)
 
     def getStructuresList(self):
-        logger.info('Getting structures list...')
+        self.logger.info('Getting structures list...')
         res = self.client.get('https://esi.tech.ccp.is/'
                               'latest/universe/structures/?'
                               'datasource=tranquility')
         assert res.status_code == 200
         res = res.json()
-        logger.debug("There are {} public structures.".format(len(res)))
+        self.logger.debug("There are {} public structures.".format(len(res)))
         self.structuresInt = res
         # For test
         if self.debug:
@@ -264,18 +255,18 @@ class EVESyncWorker:
     DROP TABLE IF EXISTS publicStructures;
     ALTER TABLE publicStructuresInserting RENAME TO publicStructures;
 """
-        logger.debug("Executing SQL:\n" + sql)
+        self.logger.debug("Executing SQL:\n" + sql)
         self.conn.executescript(sql)
 
     def insertStructuresDB(self):
         rows = self.execSQLMany("INSERT OR IGNORE INTO "
                                 "publicStructuresInserting VALUES "
                                 "(?,?,?,?,?,?,?);", self.structTuplesList)
-        logger.debug('Structures: {} rows inserted.'.format(rows))
+        self.logger.debug('Structures: {} rows inserted.'.format(rows))
         structuresCount = len(self.structTuplesList)
         if rows != structuresCount:
-            logger.warning('{} structures not inserted into the '
-                           'database'.format(structuresCount - rows))
+            self.logger.warning('{} structures not inserted into the '
+                                'database'.format(structuresCount - rows))
 
     def filterOrders(self):
         rows = self.execSQL('\n'.join([
@@ -293,7 +284,7 @@ class EVESyncWorker:
             "   )",
             ");"]))
         if rows != 0:
-            logger.info(
+            self.logger.info(
                 "{} buy orders deleted because of not located in a public "
                 "structure.".format(rows))
         rows = self.execSQL('\n'.join([
@@ -311,22 +302,22 @@ class EVESyncWorker:
             "   )",
             ");"]))
         if rows != 0:
-            logger.info(
+            self.logger.info(
                 "{} sell orders deleted because of not located in a public "
                 "structure.".format(rows))
 
     def dumpToDatabse(self):
-        logger.debug("Connecting to '{}'...".format(dbPath))
+        self.logger.debug("Connecting to '{}'...".format(dbPath))
         self.conn = sqlite3.connect(dbPath)
         self.initDB()
         self.insertStructuresDB()
         ordersCount = len(self.buyTuplesList) + len(self.sellTuplesList)
-        logger.info('Inserting {} orders into '
-                    'database'.format(ordersCount))
+        self.logger.info('Inserting {} orders into '
+                         'database'.format(ordersCount))
         rows = self.insertDB()
-        logger.debug('{} orders inserted.'.format(rows))
+        self.logger.debug('{} orders inserted.'.format(rows))
         if ordersCount != rows:
-            logger.warning(
+            self.logger.warning(
                 '{} order(s) not inserted into the'
                 ' database.'.format(ordersCount - rows))
             pass
@@ -341,8 +332,8 @@ class EVESyncWorker:
             'https://esi.tech.ccp.is/latest/universe/structures/' +
             str(pID) +
             '/?datasource=tranquility').json()
-        logger.info('Structure {} info received, its name is '
-                    '{}.'.format(pID, res['name']))
+        self.logger.info('Structure {} info received, its name is '
+                         '{}.'.format(pID, res['name']))
         self.structTuplesList.append((
             pID, res['name'], res['solar_system_id'], res['type_id'],
             res['position']['x'],
@@ -361,12 +352,13 @@ class EVESyncWorker:
                 pass
 
         if len(self.structTuplesList) != len(self.structuresInt):
-            logger.warning("Info of {} strutures not retrieved "
-                           "successfully".format(
-                                len(self.structuresInt) -
-                                len(self.structTuplesList)))
+            self.logger.warning("Info of {} strutures not retrieved "
+                                "successfully".format(
+                                    len(self.structuresInt) -
+                                    len(self.structTuplesList)))
 
     def __init__(self, debug=False, singleThread=False):
+        self.logger = logging.getLogger(__name__)
         self.debug = debug
         self.singleThread = singleThread
         self.buyTuplesList = []
@@ -383,17 +375,21 @@ class EVESyncWorker:
                 self.fetchStructuresInfo()
                 self.fetchMarketData()
                 self.dumpToDatabse()
-                logger.debug('Work done, will rest for 5 min...')
+                self.logger.debug('Work done, will rest for 5 min...')
                 time.sleep(60)
                 pass
         except KeyboardInterrupt:
-            logger.debug('KeyboardInterrupt caught, exiting gracefully...')
+            self.logger.debug('KeyboardInterrupt caught, exiting gracefully...')
             import sys
             sys.exit(0)
 
 
 if __name__ == '__main__':
-    logger.setLevel(logging.DEBUG)
+    logger = logging.getLogger(__name__)
+    channel = logging.StreamHandler()
+    channel.setFormatter(LogFormatter())
+    logging.basicConfig(handlers=[channel], level=logging.DEBUG)
+
     sde = Database()
     worker = EVESyncWorker(debug=True)
     worker.main()
