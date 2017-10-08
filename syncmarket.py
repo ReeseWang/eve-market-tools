@@ -7,7 +7,7 @@ import logging
 from tornado.log import LogFormatter
 from sde import Database
 from datetime import datetime
-from esiauth import AuthedClient
+from esiclient import AuthedClient
 import time
 
 dbPath = './db/market.sqlite'
