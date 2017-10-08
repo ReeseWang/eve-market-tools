@@ -5,7 +5,7 @@ import sqlite3
 from concurrent.futures import ThreadPoolExecutor
 import logging
 from tornado.log import LogFormatter
-from sde import Database
+from evedatabase import Database
 from datetime import datetime
 from esiclient import AuthedClient
 import time

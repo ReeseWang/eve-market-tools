@@ -2,7 +2,7 @@
 
 import logging
 import sqlqueries
-from sde import Database
+from evedatabase import Database
 from tornado.log import LogFormatter
 from prettytable import PrettyTable
 import cmd
