@@ -111,7 +111,7 @@ class Database:
         return self._getSolarSystem(solarSystemID,
                                     cols='security')[0]
 
-    def __init__(self):
+    def __init__(self, cacheMarket=True):
         self.logger = logging.getLogger(__name__)
 
         self._conn = sqlite3.connect(':memory:')
@@ -126,7 +126,7 @@ class Database:
         self.execSQL("DETACH hdd;")
 
         marketDBPath = './db/market.sqlite'
-        if os.path.exists(marketDBPath):
+        if cacheMarket and os.path.exists(marketDBPath):
             self.execSQL("ATTACH '{}' AS hdd;".format(marketDBPath))
 
             self.cacheTableToMemory('buyOrders')

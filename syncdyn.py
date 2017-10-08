@@ -423,6 +423,6 @@ if __name__ == '__main__':
     channel.setFormatter(LogFormatter())
     logging.basicConfig(handlers=[channel], level=logging.DEBUG)
 
-    database = Database()
+    database = Database(cacheMarket=False)
     worker = EVESyncWorker(database, debug=False)
     worker.main()
