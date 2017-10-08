@@ -214,7 +214,7 @@ class EVESyncWorker:
         self.regionNames = dict.fromkeys(self.regionsStr, None)
 
         for reg in self.regionsInt:
-            self.regionNames[str(reg)] = sde.getItemName(reg)
+            self.regionNames[str(reg)] = self.database.getItemName(reg)
 
     def getStructuresList(self):
         self.logger.info('Getting structures list...')
@@ -355,7 +355,7 @@ class EVESyncWorker:
     def fetchStructuresInfo(self):
         # You don't want to refresh token in multithread.
         self.client.getToken('refresh')
-        with ThreadPoolExecutor(max_workers=100) as executor:
+        with ThreadPoolExecutor(max_workers=50) as executor:
             for ID in self.structuresInt:
                 # Single thread test
                 if self.singleThread:
@@ -370,8 +370,9 @@ class EVESyncWorker:
                                     len(self.structuresInt) -
                                     len(self.structTuplesList)))
 
-    def __init__(self, debug=False, singleThread=False):
+    def __init__(self, database, debug=False, singleThread=False):
         self.logger = logging.getLogger(__name__)
+        self.database = database
         self.debug = debug
         self.singleThread = singleThread
 
@@ -422,6 +423,6 @@ if __name__ == '__main__':
     channel.setFormatter(LogFormatter())
     logging.basicConfig(handlers=[channel], level=logging.DEBUG)
 
-    sde = Database()
-    worker = EVESyncWorker(debug=False)
+    database = Database()
+    worker = EVESyncWorker(database, debug=False)
     worker.main()
