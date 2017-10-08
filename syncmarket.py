@@ -358,8 +358,10 @@ class EVESyncWorker:
         with ThreadPoolExecutor(max_workers=100) as executor:
             for ID in self.structuresInt:
                 # Single thread test
-                # getStructureInfo(pstructs, ID, client)
-                executor.submit(self.getStructureInfo, ID)
+                if self.singleThread:
+                    self.getStructureInfo(ID)
+                else:
+                    executor.submit(self.getStructureInfo, ID)
                 pass
 
         if len(self.structTuplesList) != len(self.structuresInt):
