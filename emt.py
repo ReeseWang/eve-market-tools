@@ -4,7 +4,7 @@ import logging
 import sqlqueries
 from sde import Database
 from tornado.log import LogFormatter
-from tabulate import tabulate
+from prettytable import PrettyTable
 import cmd
 import readline
 import os
@@ -84,29 +84,28 @@ class EMT(cmd.Cmd):
             print('No orders found for {}.'.format(name))
             return
         print(name.upper(), 'SELLER SUMMARY:\n')
-        print(tabulate(
-            [
+        for e in li:
+            self.sellt.add_row(
                 [
                     '{:.1f} '.format(e[0]) +
                     ' - '.join(
                         [
                             e[1],  # Region name
                             # e[2],  # Constellation name
-                            e[3][0:50]  # Station name, solar system name inc.
+                            # Station name, solar system name inc.
+                            e[3][0:50]
                         ]
                     ),
-                    float(e[4]),  # Volume remain
-                    e[5],  # Price
-                    e[4]*e[5],  # Sum
+                    format(e[4], ',d'),  # Volume remain
+                    format(e[5], ',.2f'),  # Price
+                    format(e[4]*e[5], ',.2f'),  # Sum
                     timefmt(e[6], 2),  # Updated
                     timefmt(e[7], 3)  # Issued
-                ] for e in li
-            ],
-            self.sellListHeaders,
-            tablefmt='pipe',
-            numalign='right',
-            floatfmt=('', ',.0f', ',.2f', ',.2f')
-        ))
+                ]
+            )
+            pass
+        print(self.sellt)
+        self.sellt.clear_rows()
 
     def do_buyerlist(self, arg):
         if arg:
@@ -129,8 +128,8 @@ class EMT(cmd.Cmd):
             print('No orders found for {}.'.format(name))
             return
         print(name.upper(), 'BUYER SUMMARY:\n')
-        print(tabulate(
-            [
+        for e in li:
+            self.buyt.add_row(
                 [
                     '{:.1f} '.format(e[0]) +
                     ' - '.join(
@@ -141,19 +140,17 @@ class EMT(cmd.Cmd):
                         ]
                     ),
                     rangeString(e[7]),  # Range
-                    float(e[4]),  # Volume remain
-                    float(e[6]),  # Min volume
-                    e[5],  # Price
-                    e[4]*e[5],  # Sum
+                    format(e[4], ',d'),  # Volume remain
+                    format(e[6], ',d'),  # Min volume
+                    format(e[5], ',.2f'),  # Price
+                    format(e[4]*e[5], ',.2f'),  # Sum
                     timefmt(e[8], 2),  # Updated
                     timefmt(e[9], 3)  # Issued
-                ] for e in li
-            ],
-            self.buyListHeaders,
-            tablefmt='pipe',
-            numalign='right',
-            floatfmt=('', '', ',.0f', ',.0f', ',.2f', ',.2f')
-        ))
+                ]
+            )
+            pass
+        print(self.buyt)
+        self.buyt.clear_rows()
 
     def do_test(self, arg):
         print(arg)
@@ -163,11 +160,9 @@ class EMT(cmd.Cmd):
         import sys
         sys.exit(0)
 
-    def __init__(self):
-        super().__init__()
-        self.typeID = None  # Avoiding some error
-        self.logger = logging.getLogger(__name__)
-        self.sellListHeaders = [
+    def initTables(self):
+        self.sellt = PrettyTable()
+        self.sellt.field_names = [
             'Location',
             'Remaining',
             'Ask price / ISK',
@@ -175,7 +170,14 @@ class EMT(cmd.Cmd):
             'Updated ago',
             'Issued ago'
         ]
-        self.buyListHeaders = [
+        self.sellt.align = 'r'
+        self.sellt.align['Location'] = 'l'
+        # selltColAlign = 'lrrrrr'
+        # for i in range(0, len(selltColAlign)):
+        #     self.sellt.align[self.sellt.field_names[i]] = \
+        #         selltColAlign[i]
+        self.buyt = PrettyTable()
+        self.buyt.field_names = [
             'Location',
             'Range',
             'Remaining',
@@ -185,6 +187,19 @@ class EMT(cmd.Cmd):
             'Updated ago',
             'Issued ago'
         ]
+        self.buyt.align = 'r'
+        self.buyt.align['Location'] = 'l'
+        self.buyt.align['Range'] = 'l'
+        # buytColAlign = 'llrrrrrr'
+        # for i in range(0, len(buytColAlign)):
+        #     self.buyt.align[self.buyt.field_names[i]] = \
+        #         buytColAlign[i]
+
+    def __init__(self):
+        super().__init__()
+        self.typeID = None  # Avoiding some error
+        self.logger = logging.getLogger(__name__)
+        self.initTables()
         self.db = Database()
         self.db.execSQLScript(sqlqueries.createSecFilteredMarketsView(0.45, 1))
         self.db.execSQLScript(sqlqueries.createSecFilteredOrdersView())
