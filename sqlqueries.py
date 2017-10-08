@@ -119,7 +119,7 @@ def listSellOrders():
     return '''SELECT
     security,
     regionName,
-    constellationName,
+    solarSystemName,
     stationName,
     volume_remain,
     price,
@@ -139,7 +139,7 @@ def listBuyOrders():
     return '''SELECT
     security,
     regionName,
-    constellationName,
+    solarSystemName,
     stationName,
     volume_remain,
     price,

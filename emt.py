@@ -91,9 +91,9 @@ class EMT(cmd.Cmd):
                     ' - '.join(
                         [
                             e[1],  # Region name
-                            # e[2],  # Constellation name
+                            e[2],  # Solar system name
                             # Station name, solar system name inc.
-                            e[3][0:50]
+                            # e[3][0:50]
                         ]
                     ),
                     format(e[4], ',d'),  # Volume remain
@@ -135,8 +135,9 @@ class EMT(cmd.Cmd):
                     ' - '.join(
                         [
                             e[1],  # Region name
-                            # e[2],4 # Constellation name
-                            e[3][0:40]  # Station name, solar system name inc.
+                            e[2],  # Solar system name
+                            # Station name, solar system name inc.
+                            # e[3][0:40]
                         ]
                     ),
                     rangeString(e[7]),  # Range
