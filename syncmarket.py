@@ -391,6 +391,11 @@ class EVESyncWorker:
         self.expireTime = datetime.utcnow().max
         pass
 
+    def resetDataCache(self):
+        self.buyTuplesList = []
+        self.sellTuplesList = []
+        self.structTuplesList = []
+
     def main(self):
         try:
             while True:
@@ -400,6 +405,7 @@ class EVESyncWorker:
                 self.fetchStructuresInfo()
                 self.fetchMarketData()
                 self.dumpToDatabse()
+                self.resetDataCache()
                 self.sleepUntilFirstExpire()
                 pass
         except KeyboardInterrupt:
