@@ -146,33 +146,53 @@ class AuthedClient:
         self.logger.debug('Getting ' + url + ' ...')
         while True:
             try:
-                response = requests.get(url, headers=self.headers)
-                response.raise_for_status()
-                return response
-            except Exception as error:
-                if 'expired' in response.text:
-                    self.logger.debug('Token expired, refreshing...')
-                    self.getToken('refresh')
-                    response = requests.get(url, headers=self.headers)
-                    return response
-                if 'Forbidden' in response.text:
-                    return
-                else:
-                    if isServerDownTime():
+                res = requests.get(url, headers=self.headers)
+                res.raise_for_status()
+                return res
+            except requests.exceptions.RequestException as error:
+                try:
+                    errorstr = res.json()['error']
+                    if res.status_code == 420:
+                        t = res.headers['X-Esi-Error-Limit-Reset']
+                        self.logger.critical(
+                            errorstr +
+                            '\nWaiting until the end of current '
+                            'error limit window. ({} sec. '
+                            'left)'.format(t))
+                        time.sleep(int(t))
+                    elif errorstr == 'expired':
+                        self.logger.debug('Token expired, refreshing...')
+                        self.getToken('refresh')
+                        res = self.get(url)
+                        return res
+                    elif errorstr == 'Forbidden':
+                        self.logger.error(str(error))
+                        return
+                    elif isServerDownTime():
                         sec = howLongBeforeServerUp()
-                        logging.warning(
+                        self.logger.warning(
                             'EVE Online server cluster shutdown '
                             'daily at 11:00 - 11:15 UTC, will retry '
-                            'after the downtime ends ({} sec '
+                            'after the downtime ends ({} sec. '
                             'remaining).'.format(round(sec))
                         )
                         time.sleep(sec)
                     else:
-                        logging.error(
-                            'Server not OK: {}: {} . Will retry after 5 '
-                            'seconds...'.format(
-                                response.status_code, response.text))
-                        time.sleep(5)
+                        errorRemain = res.headers[
+                            'x-esi-error-limit-remain'
+                        ]
+                        self.logger.error(
+                            'Server said, "{}: {}." Will retry after 10 '
+                            'seconds... You still have {} '
+                            'chance(s) before being blocked.'.format(
+                                res.status_code,
+                                errorstr,
+                                errorRemain)
+                        )
+                        time.sleep(10)
+                except Exception as error:
+                    logger.critical(str(error))
+                    return
 
     def post(self, url, data=None):
         try:
