@@ -143,7 +143,7 @@ class Database:
             targetDBPath=self.marketDBPath,
             taskCompletedQueue=aWorkerCmpltedTask,
             taskCompletedSignal='market',
-            debug=True)
+            debug=False)
         self.logger.debug("Created market sync worker.")
 
         syncWorkerThread = threading.Thread(

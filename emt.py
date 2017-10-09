@@ -61,7 +61,7 @@ def rangeString(r):
 
 
 class EMT(cmd.Cmd):
-    prompt = 'EVE Online Market>'
+    prompt = 'EVE Online Market > '
 
     def do_sellerlist(self, arg):
         if arg:
@@ -83,7 +83,7 @@ class EMT(cmd.Cmd):
         if not li:  # No orders found
             print('No orders found for {}.'.format(name))
             return
-        print(name.upper(), 'SELLER SUMMARY:\n')
+        print('\n', name.upper(), 'SELLER SUMMARY:\n')
         for e in li:
             self.sellt.add_row(
                 [
@@ -127,7 +127,7 @@ class EMT(cmd.Cmd):
         if not li:  # No orders found
             print('No orders found for {}.'.format(name))
             return
-        print(name.upper(), 'BUYER SUMMARY:\n')
+        print('\n', name.upper(), 'BUYER SUMMARY:\n')
         for e in li:
             self.buyt.add_row(
                 [
@@ -210,7 +210,7 @@ if __name__ == '__main__':
     logger = logging.getLogger(__name__)
     channel = logging.StreamHandler()
     channel.setFormatter(LogFormatter())
-    logging.basicConfig(handlers=[channel], level=logging.DEBUG)
+    logging.basicConfig(handlers=[channel], level=logging.WARNING)
 
     historyFilePath = os.path.join(os.path.expanduser("~"), '.emt_history')
 

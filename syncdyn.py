@@ -276,7 +276,7 @@ class EVESyncWorker:
         self.logger.debug('Structures: {} rows inserted.'.format(rows))
         structuresCount = len(self.structTuplesList)
         if rows != structuresCount:
-            self.logger.warning('{} structures not inserted into the '
+            self.logger.warning('{} structure(s) not inserted into the '
                                 'database'.format(structuresCount - rows))
 
     def filterOrders(self):
@@ -412,11 +412,10 @@ class EVESyncWorker:
 
     def main(self):
         try:
+            self.getRegionsList()
+            self.getStructuresList()
+            self.fetchStructuresInfo()
             while True:
-                self.getRegionsList()
-                self.getStructuresList()
-
-                self.fetchStructuresInfo()
                 self.fetchMarketData()
                 if self.targetDBLock:
                     with self.targetDBLock:
