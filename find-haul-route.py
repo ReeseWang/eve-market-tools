@@ -6,14 +6,17 @@ import requests
 from esiauth import authedClient
 import sde
 from math import ceil
+import traceback
 
 cargoVolumeLim = 10000000
-budgetLim = 1e8
+budgetLim = 1e9
 highsecRoute = True
 minSecSta = 0.45
 maxSecSta = 1
 minMargin = 0.1
 minProfit = 1e7
+maxProfit = 1e9
+minProfitPer1000m3 = 1e6
 taxRate = 1 - 0.02
 
 name = 'name'
@@ -229,7 +232,8 @@ for typeId in orders:
                 # print('Margin = {:.2%} < {:.2%}, '
                 #       'too low.'.format(margin, minMargin))
                 continue
-            if profit < minProfit:
+            # There are some scam buy orders results in ridiculous high profit.
+            if profit < minProfit or profit > maxProfit:
                 # print('Profit = {:,.2f} ISK < {:,.2f} ISK, '
                 #       'too low.'.format(profit, minProfit))
                 continue
@@ -242,9 +246,13 @@ for typeId in orders:
                 # print('Min. cost = {:,.2f} ISK > {:,.2f} ISK, too high.'.\
                 #         format(minCost, budgetLim))
                 continue
+            itemVolume = sde.getTypeVolume(int(typeId))
+            profitPer1000m3 = (buyOrdersList[0][price] * taxRate -
+                sellOrdersList[0][price]) / itemVolume * 1000
+            if profitPer1000m3 < minProfitPer1000m3:
+                continue
             try:
                 if cargoVolumeLim != 0:
-                    itemVolume = sde.getTypeVolume(int(typeId))
                     if itemVolume > cargoVolumeLim:
                         # print('Item volume = /
                         #       '{}m3 > {}m3, too big.'.format(itemVolume,
@@ -286,12 +294,16 @@ for typeId in orders:
                     continue
                 # sysBuy = getOrderSolarSystem(locBuy)
                 secBuy = getOrderSecurity(locBuy)
+                if not secBuy:
+                    continue
                 if not (minSecSta < secBuy < maxSecSta):
                     # print('Buyer location security status '
                     #       'does not meet requirements.')
                     continue
                 # sysSell = getOrderSolarSystem(locSell)
                 secSell = getOrderSecurity(locSell)
+                if not secSell:
+                    continue
                 if not (minSecSta < secSell < maxSecSta):
                     # print('Seller location security status '
                     #       'does not meet requirements.')
@@ -313,7 +325,8 @@ for typeId in orders:
                     ppj = profit / jumps
                 pass
             except Exception as errorMessage:
-                print(errorMessage.args[0])
+                tb = traceback.format_exc()
+                print(locBuy, locSell, tb)
                 continue
             legitPair = dict([
                 ('highest_buy', buyOrdersList[0][price]),

@@ -58,7 +58,9 @@ def _getStation(stationID, cols):
 
 
 def getStationSecurity(stationID):
-    return _getStation(stationID, cols='security')[0]
+    res = _getStation(stationID, cols='security')
+    if res:
+        return res[0]
 
 
 def getStationSolarSystem(stationID):
