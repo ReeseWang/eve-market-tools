@@ -191,7 +191,7 @@ class AuthedClient:
                         )
                         time.sleep(10)
                 except Exception as error:
-                    logger.critical(str(error))
+                    self.logger.critical(str(error))
                     return
 
     def post(self, url, data=None):
