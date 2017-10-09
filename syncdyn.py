@@ -5,10 +5,10 @@ import sqlite3
 from concurrent.futures import ThreadPoolExecutor
 import logging
 from tornado.log import LogFormatter
-from evedatabase import Database
 from datetime import datetime
 from esiclient import AuthedClient
 import time
+import threading
 
 dbPath = './db/market.sqlite'
 
@@ -370,7 +370,14 @@ class EVESyncWorker:
                                     len(self.structuresInt) -
                                     len(self.structTuplesList)))
 
-    def __init__(self, database, debug=False, singleThread=False):
+    def __init__(self,
+                 database,
+                 targetDBLock=None,
+                 targetDBPath='./db/market.sqlite',
+                 taskCompletedQueue=None,
+                 taskCompletedSignal=0,
+                 debug=False,
+                 singleThread=False):
         self.logger = logging.getLogger(__name__)
         self.database = database
         self.debug = debug
@@ -382,6 +389,10 @@ class EVESyncWorker:
         self.sellTuplesList = []
         self.structTuplesList = []
         self.client = AuthedClient()
+        self.targetDBLock = targetDBLock
+        self.targetDBPath = targetDBPath
+        self.taskCompletedQueue = taskCompletedQueue
+        self.taskCompletedSignal = taskCompletedSignal
 
     def sleepUntilFirstExpire(self):
         sleepSec = (self.expireTime - datetime.utcnow()).total_seconds()
@@ -407,8 +418,18 @@ class EVESyncWorker:
 
                 self.fetchStructuresInfo()
                 self.fetchMarketData()
-                self.dumpToDatabse()
+                if self.targetDBLock:
+                    with self.targetDBLock:
+                        self.dumpToDatabse()
+                else:
+                    self.dumpToDatabse()
                 self.resetDataCache()
+                if self.taskCompletedQueue:
+                    self.taskCompletedQueue.put(
+                        self.taskCompletedSignal
+                    )
+                    self.logger.debug("Sent 'mission completed' "
+                                      "signal.")
                 self.sleepUntilFirstExpire()
                 pass
         except KeyboardInterrupt:
@@ -423,6 +444,9 @@ if __name__ == '__main__':
     channel.setFormatter(LogFormatter())
     logging.basicConfig(handlers=[channel], level=logging.DEBUG)
 
+    lock = threading.Lock()
+
+    from evedatabase import Database
     database = Database(cacheMarket=False)
     worker = EVESyncWorker(database, debug=False)
     worker.main()

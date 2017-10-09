@@ -5,6 +5,9 @@ import logging
 # from syncmarket import dbPath as marketDBPath
 import os
 from tornado.log import LogFormatter
+import threading
+import queue
+import syncdyn
 
 
 class Database:
@@ -35,6 +38,7 @@ class Database:
         c = self.execSQL("SELECT sql FROM hdd.sqlite_master "
                          "WHERE name = ? AND type = 'table';", (table,))
         sql = c.fetchone()[0]
+        self.execSQL("DROP TABLE IF EXISTS main.{};".format(table))
         self.execSQLScript(
             sql +
             ";\nINSERT INTO main.{0} SELECT * FROM hdd.{0};".format(table))
@@ -111,29 +115,69 @@ class Database:
         return self._getSolarSystem(solarSystemID,
                                     cols='security')[0]
 
-    def __init__(self, cacheMarket=True):
-        self.logger = logging.getLogger(__name__)
+    def cacheSDETables(self):
+        with self.sdeLock:
+            self.execSQL("ATTACH './db/sde.sqlite' AS hdd;")
+            self.cacheTableToMemory('invTypes')
+            self.cacheTableToMemory('invNames')
+            self.cacheTableToMemory('staStations')
+            self.cacheTableToMemory('mapSolarSystems')
+            self._cacheItemsPackVols()
+            self._conn.commit()
+            self.execSQL("DETACH hdd;")
 
-        self._conn = sqlite3.connect(':memory:')
-        self.execSQL("ATTACH './db/sde.sqlite' AS hdd;")
-
-        self.cacheTableToMemory('invTypes')
-        self.cacheTableToMemory('invNames')
-        self.cacheTableToMemory('staStations')
-        self.cacheTableToMemory('mapSolarSystems')
-        self._cacheItemsPackVols()
-
-        self.execSQL("DETACH hdd;")
-
-        marketDBPath = './db/market.sqlite'
-        if cacheMarket and os.path.exists(marketDBPath):
-            self.execSQL("ATTACH '{}' AS hdd;".format(marketDBPath))
-
+    def cacheMarketTables(self):
+        with self.marketDBLock:
+            self.execSQL("ATTACH '{}' AS hdd;".format(self.marketDBPath))
             self.cacheTableToMemory('buyOrders')
             self.cacheTableToMemory('sellOrders')
             self.cacheTableToMemory('publicStructures')
-
+            self._conn.commit()
             self.execSQL("DETACH hdd;")
+
+    def cacheDynWorker(self):
+        aWorkerCmpltedTask = queue.Queue(maxsize=1)
+        syncWorker = syncdyn.EVESyncWorker(
+            database=self,
+            targetDBLock=self.marketDBLock,
+            targetDBPath=self.marketDBPath,
+            taskCompletedQueue=aWorkerCmpltedTask,
+            taskCompletedSignal='market',
+            debug=True)
+        self.logger.debug("Created market sync worker.")
+
+        syncWorkerThread = threading.Thread(
+            target=syncWorker.main,
+            daemon=True)
+        syncWorkerThread.start()
+        self.logger.debug("Started market sync worker.")
+
+        while True:
+            sig = aWorkerCmpltedTask.get()
+            self.logger.debug("A worker completed his task.")
+            if sig == 'market':
+                self.logger.debug("Caching market tables...")
+                self.cacheMarketTables()
+                self.logger.debug("Cache table done.")
+
+    def __init__(self, cacheMarket=True):
+        self.logger = logging.getLogger(__name__)
+        self.marketDBLock = threading.Lock()
+        self.sdeLock = threading.Lock()
+
+        self._conn = sqlite3.connect(':memory:',
+                                     check_same_thread=False)
+
+        self.cacheSDETables()
+        self.marketDBPath = './db/market.sqlite'
+        if cacheMarket:
+            if os.path.exists(self.marketDBPath):
+                self.cacheMarketTables()
+                pass
+            self.cacheDynWorkerThread = threading.Thread(
+                target=self.cacheDynWorker)
+            self.cacheDynWorkerThread.start()
+            self.logger.debug("Started cacheDynWorker.")
             pass
 
 
