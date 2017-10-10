@@ -160,7 +160,9 @@ class Database:
                 self.cacheMarketTables()
                 self.logger.debug("Cache table done.")
 
-    def __init__(self, cacheMarket=True):
+    def __init__(self,
+                 cacheMarket=True,
+                 updateMarket=True):
         self.logger = logging.getLogger(__name__)
         self.marketDBLock = threading.Lock()
         self.sdeLock = threading.Lock()
@@ -174,11 +176,12 @@ class Database:
             if os.path.exists(self.marketDBPath):
                 self.cacheMarketTables()
                 pass
-            self.cacheDynWorkerThread = threading.Thread(
-                target=self.cacheDynWorker)
-            self.cacheDynWorkerThread.start()
-            self.logger.debug("Started cacheDynWorker.")
-            pass
+            if updateMarket:
+                self.cacheDynWorkerThread = threading.Thread(
+                    target=self.cacheDynWorker)
+                self.cacheDynWorkerThread.start()
+                self.logger.debug("Started cacheDynWorker.")
+                pass
 
 
 if __name__ == '__main__':

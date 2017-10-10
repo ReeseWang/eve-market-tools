@@ -10,6 +10,7 @@ import readline
 import os
 import atexit
 from datetime import datetime
+import argparse
 
 
 def timefmt(timestamp, level=3):
@@ -140,11 +141,11 @@ class EMT(cmd.Cmd):
                             # e[3][0:40]
                         ]
                     ),
-                    rangeString(e[7]),  # Range
                     format(e[4], ',d'),  # Volume remain
-                    format(e[6], ',d'),  # Min volume
                     format(e[5], ',.2f'),  # Price
                     format(e[4]*e[5], ',.2f'),  # Sum
+                    format(e[6], ',d'),  # Min volume
+                    rangeString(e[7]),  # Range
                     timefmt(e[8], 2),  # Updated
                     timefmt(e[9], 3)  # Issued
                 ]
@@ -180,11 +181,11 @@ class EMT(cmd.Cmd):
         self.buyt = PrettyTable()
         self.buyt.field_names = [
             'Location',
-            'Range',
             'Remaining',
-            'Min volume',
             'Bid price / ISK',
             'Sum / ISK',
+            'Min volume',
+            'Range',
             'Updated ago',
             'Issued ago'
         ]
@@ -196,17 +197,24 @@ class EMT(cmd.Cmd):
         #     self.buyt.align[self.buyt.field_names[i]] = \
         #         buytColAlign[i]
 
-    def __init__(self):
+    def __init__(self, updateDynamic=True):
         super().__init__()
         self.typeID = None  # Avoiding some error
         self.logger = logging.getLogger(__name__)
         self.initTables()
-        self.db = Database()
+        self.db = Database(updateMarket=updateDynamic)
         self.db.execSQLScript(sqlqueries.createSecFilteredMarketsView(0.45, 1))
         self.db.execSQLScript(sqlqueries.createSecFilteredOrdersView())
 
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='EVE Market Tool')
+    parser.add_argument('--debug-no-update-dynamic-data',
+                        help="Don't update dynamic data "
+                        "(market, player structures, etc.)",
+                        action='store_true')
+    args = parser.parse_args()
+
     logger = logging.getLogger(__name__)
     channel = logging.StreamHandler()
     channel.setFormatter(LogFormatter())
@@ -225,5 +233,5 @@ if __name__ == '__main__':
 
     atexit.register(saveHistory, hlen, historyFilePath)
 
-    tool = EMT()
+    tool = EMT(updateDynamic=not args.debug_no_update_dynamic_data)
     tool.cmdloop()
