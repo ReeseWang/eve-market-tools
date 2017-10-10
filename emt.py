@@ -219,12 +219,18 @@ if __name__ == '__main__':
                         help="Don't update dynamic data "
                         "(market, player structures, etc.)",
                         action='store_true')
+    parser.add_argument('--debug-verbose',
+                        help='Set logger level to DEBUG.',
+                        action='store_true')
     args = parser.parse_args()
 
     logger = logging.getLogger(__name__)
     channel = logging.StreamHandler()
     channel.setFormatter(LogFormatter())
-    logging.basicConfig(handlers=[channel], level=logging.WARNING)
+    if args.debug_verbose:
+        logging.basicConfig(handlers=[channel], level=logging.DEBUG)
+    else:
+        logging.basicConfig(handlers=[channel], level=logging.WARNING)
 
     historyFilePath = os.path.join(os.path.expanduser("~"), '.emt_history')
 
