@@ -90,7 +90,7 @@ class EMT(cmd.Cmd):
         if not li:  # No orders found
             print('No orders found for {}.'.format(name))
             return
-        print('\n', name.upper(), 'SELLER SUMMARY:\n')
+        print('\n', name, 'SELLER SUMMARY:\n')
         for e in li:
             self.sellt.add_row(
                 [
@@ -134,7 +134,7 @@ class EMT(cmd.Cmd):
         if not li:  # No orders found
             print('No orders found for {}.'.format(name))
             return
-        print('\n', name.upper(), 'BUYER SUMMARY:\n')
+        print('\n', name, 'BUYER SUMMARY:\n')
         for e in li:
             self.buyt.add_row(
                 [
