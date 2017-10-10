@@ -5,6 +5,7 @@ secFilteredMarketsViewName = 'secMarkets'
 secFilteredBuyOrdersViewName = 'secBuyOrders'
 secFilteredSellOrdersViewName = 'secSellOrders'
 whatIsCheaperThanJitaViewName = 'cheaperThanJita'
+itemPackagedSizesViewName = 'packSizes'
 
 test = '''SELECT
     *
@@ -14,6 +15,21 @@ ORDER BY
     maxMargin DESC
 LIMIT 30;
 '''.format(table=whatIsCheaperThanJitaViewName)
+
+
+def getWhatInWhereHasCheaperThanJita(groupby='region_id'):
+    return '''SELECT
+    type_id,
+    {groupby}
+FROM
+    {table}
+WHERE
+    maxMargin > ? AND maxProfitPerM3 > ?
+GROUP BY
+    type_id,
+    {groupby};
+'''.format(table=whatIsCheaperThanJitaViewName,
+           groupby=goupby)
 
 
 def createSecFilteredMarketsView(minSec=-1, maxSec=1):
@@ -167,10 +183,40 @@ LIMIT 20;
 '''.format(table=secFilteredBuyOrdersViewName)
 
 
-def createWhatWhereCheaperThanJitaView(taxcoeff=0.98):
-    assert 0 < taxcoeff < 1
+def createItemPackagedVolumesView():
+    return '''CREATE TEMP VIEW IF NOT EXISTS {view}
+AS
+SELECT
+    typeID,
+    volume
+FROM
+    invVolumes
+UNION ALL
+SELECT
+    typeID,
+    volume
+FROM
+    invTypes
+WHERE
+    typeID NOT IN (SELECT typeID FROM invVolumes);
+'''.format(view=itemPackagedSizesViewName)
+
+jitaBelongTo = {
+    'region': 'region_id = 10000002',
+    'constellation': 'constellationID = 20000020',
+    'solarsystem': 'solarSystemID = 30000142',
+    'station': 'location_id = 50003760'
+}
+
+def createWhatWhereCheaperThanJitaView(taxCoeff=0.98,
+                                       minProfitPerM3=500.0,
+                                       minMargin=0.1,
+                                       jitaRange='constellation'):
+    assert 0 < taxCoeff < 1
+    priceCoeff = taxCoeff / (1 + minMargin)
+    buyLocationConstraint = jitaBelongTo[jitaRange]
     return '''DROP VIEW IF EXISTS {view};
-CREATE TEMP VIEW IF NOT EXISTS {view}
+CREATE TEMP VIEW {view}
 AS
 SELECT
     {secSell}.type_id AS type_id,
@@ -178,8 +224,11 @@ SELECT
     region_id,
     constellationID,
     solarSystemID,
-    (jitaHigh.maxBid * {taxcoeff} / {secSell}.price - 1) AS maxMargin,
-    jitaHigh.maxBid AS maxBid
+    {secSell}.price AS ask,
+    jitaHigh.maxBid AS maxBid,
+    (jitaHigh.maxBid * {taxCoeff} / {secSell}.price - 1) AS maxMargin,
+    (jitaHigh.maxBid * {taxCoeff} - {secSell}.price) /
+        {size}.volume AS maxProfitPerM3
 FROM {secSell}
 INNER JOIN (
     SELECT
@@ -188,14 +237,24 @@ INNER JOIN (
     FROM
         {secBuy}
     WHERE
-        region_id = 10000002
+        {buyLocationConstraint}
     GROUP BY
         type_id
-) AS jitaHigh
-ON jitaHigh.type_id = {secSell}.type_id
-WHERE {secSell}.price < jitaHigh.maxBid * {taxcoeff};
+) AS jitaHigh ON
+    jitaHigh.type_id = {secSell}.type_id
+INNER JOIN {size} ON
+    {size}.typeID = {secSell}.type_id
+WHERE
+    {secSell}.price < jitaHigh.maxBid * {priceCoeff}
+    AND
+    jitaHigh.maxBid * {taxCoeff} - {secSell}.price >
+    {minProfitPerM3} * {size}.volume;
 '''.format(view=whatIsCheaperThanJitaViewName,
+           size=itemPackagedSizesViewName,
            secBuy=secFilteredBuyOrdersViewName,
            secSell=secFilteredSellOrdersViewName,
-           taxcoeff=taxcoeff
+           priceCoeff=priceCoeff,
+           taxCoeff=taxCoeff,
+           minProfitPerM3=minProfitPerM3,
+           buyLocationConstraint=buyLocationConstraint
            )

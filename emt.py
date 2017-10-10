@@ -160,6 +160,9 @@ class EMT(cmd.Cmd):
         print(self.buyt)
         self.buyt.clear_rows()
 
+    def do_haultojita(self, arg):
+        pass
+
     def do_test(self, arg):
         c = self.db.execSQL(sqlqueries.test)
         rows = c.fetchall()
@@ -168,10 +171,26 @@ class EMT(cmd.Cmd):
             table.add_row(row)
         print(table)
 
+    def do_sqltest(self, arg):
+        try:
+            c = self.db.execSQL(arg)
+            rows = c.fetchall()
+            table = PrettyTable()
+            for row in rows:
+                table.add_row(row)
+            print(table)
+        except Exception as e:
+            print(str(e))
+
     def do_EOF(self, arg):
         print('Fly safe!')
         import sys
         sys.exit(0)
+
+    def initConstants(self):
+        self.minMargin = 0.1
+        self.minProfitPerM3 = 500.0
+        self.taxCoeff = 0.98
 
     def initTables(self):
         self.sellt = PrettyTable()
@@ -213,9 +232,11 @@ class EMT(cmd.Cmd):
         self.typeID = None  # Avoiding some error
         self.logger = logging.getLogger(__name__)
         self.initTables()
+        self.initConstants()
         self.db = Database(updateMarket=updateDynamic)
         self.db.execSQLScript(sqlqueries.createSecFilteredMarketsView(0.45, 1))
         self.db.execSQLScript(sqlqueries.createSecFilteredOrdersView())
+        self.db.execSQLScript(sqlqueries.createItemPackagedVolumesView())
         self.db.execSQLScript(sqlqueries.createWhatWhereCheaperThanJitaView())
 
 
