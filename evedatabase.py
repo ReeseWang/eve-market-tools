@@ -119,6 +119,7 @@ class Database:
         with self.sdeLock:
             self.execSQL("ATTACH './db/sde.sqlite' AS hdd;")
             self.cacheTableToMemory('invTypes')
+            self.cacheTableToMemory('invVolumes')
             self.cacheTableToMemory('invNames')
             self.cacheTableToMemory('staStations')
             self.cacheTableToMemory('mapSolarSystems')
