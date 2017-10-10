@@ -27,12 +27,18 @@ def timefmt(timestamp, level=3):
         h, m = '00:', '00'
         pass
     if secs > 3600 and level >= 2:
-        h = '{:02d}:'.format(secs // 3600)
+        if not d:
+            h = '{:d}:'.format(secs // 3600)
+        else:
+            h = '{:02d}:'.format(secs // 3600)
         secs %= 3600
         m = '00'
         pass
     if secs > 60 and level >= 1:
-        m = '{:02d}'.format(secs // 60)
+        if not h:
+            m = '{:d}'.format(secs // 60)
+        else:
+            m = '{:02d}'.format(secs // 60)
         secs %= 60
         pass
     s = ':{:02d}'.format(secs)
