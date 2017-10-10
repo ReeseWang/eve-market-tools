@@ -100,7 +100,7 @@ class EMT(cmd.Cmd):
                     format(e[4], ',d'),  # Volume remain
                     format(e[5], ',.2f'),  # Price
                     format(e[4]*e[5], ',.2f'),  # Sum
-                    timefmt(e[6], 2),  # Updated
+                    timefmt(e[6], 1),  # Updated
                     timefmt(e[7], 3)  # Issued
                 ]
             )
@@ -146,7 +146,7 @@ class EMT(cmd.Cmd):
                     format(e[4]*e[5], ',.2f'),  # Sum
                     format(e[6], ',d'),  # Min volume
                     rangeString(e[7]),  # Range
-                    timefmt(e[8], 2),  # Updated
+                    timefmt(e[8], 1),  # Updated
                     timefmt(e[9], 3)  # Issued
                 ]
             )
