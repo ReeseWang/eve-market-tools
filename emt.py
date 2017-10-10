@@ -161,7 +161,12 @@ class EMT(cmd.Cmd):
         self.buyt.clear_rows()
 
     def do_test(self, arg):
-        print(arg)
+        c = self.db.execSQL(sqlqueries.test)
+        rows = c.fetchall()
+        table = PrettyTable()
+        for row in rows:
+            table.add_row(row)
+        print(table)
 
     def do_EOF(self, arg):
         print('Fly safe!')
@@ -211,6 +216,7 @@ class EMT(cmd.Cmd):
         self.db = Database(updateMarket=updateDynamic)
         self.db.execSQLScript(sqlqueries.createSecFilteredMarketsView(0.45, 1))
         self.db.execSQLScript(sqlqueries.createSecFilteredOrdersView())
+        self.db.execSQLScript(sqlqueries.createWhatWhereCheaperThanJitaView())
 
 
 if __name__ == '__main__':

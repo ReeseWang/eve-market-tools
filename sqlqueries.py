@@ -4,6 +4,16 @@ sellOrdersTableName = 'sellOrders'
 secFilteredMarketsViewName = 'secMarkets'
 secFilteredBuyOrdersViewName = 'secBuyOrders'
 secFilteredSellOrdersViewName = 'secSellOrders'
+whatIsCheaperThanJitaViewName = 'cheaperThanJita'
+
+test = '''SELECT
+    *
+FROM
+    {table}
+ORDER BY
+    maxMargin DESC
+LIMIT 30;
+'''.format(table=whatIsCheaperThanJitaViewName)
 
 
 def createSecFilteredMarketsView(minSec=-1, maxSec=1):
@@ -155,3 +165,37 @@ ORDER BY
     price DESC
 LIMIT 20;
 '''.format(table=secFilteredBuyOrdersViewName)
+
+
+def createWhatWhereCheaperThanJitaView(taxcoeff=0.98):
+    assert 0 < taxcoeff < 1
+    return '''DROP VIEW IF EXISTS {view};
+CREATE TEMP VIEW IF NOT EXISTS {view}
+AS
+SELECT
+    {secSell}.type_id AS type_id,
+    location_id,
+    region_id,
+    constellationID,
+    solarSystemID,
+    (jitaHigh.maxBid * {taxcoeff} / {secSell}.price - 1) AS maxMargin,
+    jitaHigh.maxBid AS maxBid
+FROM {secSell}
+INNER JOIN (
+    SELECT
+        type_id,
+        MAX(price) as maxBid
+    FROM
+        {secBuy}
+    WHERE
+        region_id = 10000002
+    GROUP BY
+        type_id
+) AS jitaHigh
+ON jitaHigh.type_id = {secSell}.type_id
+WHERE {secSell}.price < jitaHigh.maxBid * {taxcoeff};
+'''.format(view=whatIsCheaperThanJitaViewName,
+           secBuy=secFilteredBuyOrdersViewName,
+           secSell=secFilteredSellOrdersViewName,
+           taxcoeff=taxcoeff
+           )
