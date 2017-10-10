@@ -36,7 +36,7 @@ def isServerDownTime():
 def howLongBeforeServerUp():
     now = datetime.utcnow()
     end = now.replace(**manEnd)
-    return (end - now).total_seconds
+    return (end - now).total_seconds()
 
 
 class AuthedClient:
