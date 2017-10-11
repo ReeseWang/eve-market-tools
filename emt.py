@@ -239,7 +239,7 @@ class EMT(cmd.Cmd):
         self.db.execSQLScript(sqlqueries.createSecFilteredOrdersView())
         self.db.execSQLScript(sqlqueries.createItemPackagedVolumesView())
         self.db.execSQLScript(
-            sqlqueries.createWhatWhereCheaperThanJitaView(
+            sqlqueries.createCheapThanJitaTable(
                 taxCoeff=self.taxCoeff,
                 minProfitPerM3=self.minProfitPerM3,
                 minMargin=self.minMargin)

@@ -244,7 +244,7 @@ jitaBelongTo = {
     'station': 'location_id = 50003760'
 }
 
-def createWhatWhereCheaperThanJitaView(taxCoeff=0.98,
+def createCheapThanJitaTable(taxCoeff=0.98,
                                        minProfitPerM3=500.0,
                                        minMargin=0.1,
                                        jitaRange='constellation'):
@@ -265,13 +265,12 @@ WHERE
     {buyLocConstraint}
 GROUP BY
     type_id;
-DROP VIEW IF EXISTS {cheap};
-CREATE TEMP VIEW {cheap}
+DROP TABLE IF EXISTS {cheap};
+CREATE TABLE {cheap}
 AS
 SELECT
     order_id,
     volume_remain,
-    {packSize}.volume AS size,
     {secSell}.type_id AS type_id,
     location_id,
     region_id,
