@@ -65,7 +65,7 @@ FROM
 INNER JOIN mapSolarSystems ON
     mapSolarSystems.solarSystemId = {pubStruct}.solar_system_id
 WHERE
-    {minSec} < mapSolarSystems.security AND mapSolarSystems.security < {maxSec}
+    {minSec} <= mapSolarSystems.security AND mapSolarSystems.security <= {maxSec}
 UNION ALL
 SELECT
     stationID,
@@ -79,7 +79,7 @@ SELECT
 FROM
     staStations
 WHERE
-    {minSec} < security AND security < {maxSec}
+    {minSec} <= security AND security <= {maxSec}
 ;
 ''').format_map(names)
 
