@@ -1,22 +1,23 @@
-publicStructuresTableName = 'publicStructures'
-buyOrdersTableName = 'buyOrders'
-sellOrdersTableName = 'sellOrders'
-secFilteredMarketsViewName = 'secMarkets'
-secFilteredBuyOrdersViewName = 'secBuyOrders'
-secFilteredSellOrdersViewName = 'secSellOrders'
-whatIsCheaperThanJitaViewName = 'cheaperThanJita'
-itemPackagedSizesViewName = 'packSizes'
-jitaHighestBidViewName = 'jitaHigh'
-
 names = {
+    # Public Structures table created by syncdyn
     'pubStruct' : 'publicStructures',
+    # Buy orders table created by syncdyn
     'buy' : 'buyOrders',
+    # Sell orders table created by syncdyn
     'sell' : 'sellOrders',
+    # View of markets (stations and citadels) which sit in solar systems
+    # whose security status satisfies given constraints.
     'secMarket' : 'secFilteredMarket',
+    # View of buy orders which sits in said markets.
     'secBuy' : 'secFilteredBuyOrders',
+    # View of sell orders which sits in said markets.
     'secSell' : 'secFilteredSellOrders',
+    # View of item sizes, packaged size if it has this property.
     'packSize' : 'itemPackagedSizes',
+    # Table of sell orders which is cheaper than Jita highest bid price
+    # and satisfies some constraints.
     'cheap' : 'secFilteredSellCheaperThanJita',
+    # View of highest bid prices of each type of items in Jita
     'jitaHigh' : 'jitaHighestBidPrices'
 }
 
