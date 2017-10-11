@@ -6,6 +6,7 @@ secFilteredBuyOrdersViewName = 'secBuyOrders'
 secFilteredSellOrdersViewName = 'secSellOrders'
 whatIsCheaperThanJitaViewName = 'cheaperThanJita'
 itemPackagedSizesViewName = 'packSizes'
+jitaHighestBidViewName = 'jitaHigh'
 
 test = '''SELECT
     *
@@ -201,6 +202,31 @@ WHERE
     typeID NOT IN (SELECT typeID FROM invVolumes);
 '''.format(view=itemPackagedSizesViewName)
 
+
+def pickHaulToJitaTargetSellOrders():
+    return '''SELECT
+    order_id,
+    location_id,
+    volume_remain,
+    price
+FROM
+    {secSell}
+WHERE
+    {secSell}.type_id = ?
+    AND
+    region_id = ?
+'''
+
+
+def pickHaulToJitaItemLocationCombination():
+    return '''SELECT
+    {cheap}.type_id,
+    region_id,
+FROM
+    {cheap}
+'''.format(cheap=whatIsCheaperThanJitaViewName)
+
+
 jitaBelongTo = {
     'region': 'region_id = 10000002',
     'constellation': 'constellationID = 20000020',
@@ -215,32 +241,32 @@ def createWhatWhereCheaperThanJitaView(taxCoeff=0.98,
     assert 0 < taxCoeff < 1
     priceCoeff = taxCoeff / (1 + minMargin)
     buyLocationConstraint = jitaBelongTo[jitaRange]
-    return '''DROP VIEW IF EXISTS {view};
-CREATE TEMP VIEW {view}
+    return '''DROP VIEW IF EXISTS {jitaHigh};
+CREATE TEMP VIEW {jitaHigh}
 AS
 SELECT
+    type_id,
+    MAX(price) as maxBid
+FROM
+    {secBuy}
+WHERE
+    {buyLocationConstraint}
+GROUP BY
+    type_id;
+DROP VIEW IF EXISTS {cheap};
+CREATE TEMP VIEW {cheap}
+AS
+SELECT
+    order_id,
+    volume_remain,
+    {size}.volume AS size,
     {secSell}.type_id AS type_id,
     location_id,
     region_id,
     constellationID,
-    solarSystemID,
-    {secSell}.price AS ask,
-    jitaHigh.maxBid AS maxBid,
-    (jitaHigh.maxBid * {taxCoeff} / {secSell}.price - 1) AS maxMargin,
-    (jitaHigh.maxBid * {taxCoeff} - {secSell}.price) /
-        {size}.volume AS maxProfitPerM3
+    solarSystemID
 FROM {secSell}
-INNER JOIN (
-    SELECT
-        type_id,
-        MAX(price) as maxBid
-    FROM
-        {secBuy}
-    WHERE
-        {buyLocationConstraint}
-    GROUP BY
-        type_id
-) AS jitaHigh ON
+INNER JOIN {jitaHigh} ON
     jitaHigh.type_id = {secSell}.type_id
 INNER JOIN {size} ON
     {size}.typeID = {secSell}.type_id
@@ -249,12 +275,13 @@ WHERE
     AND
     jitaHigh.maxBid * {taxCoeff} - {secSell}.price >
     {minProfitPerM3} * {size}.volume;
-'''.format(view=whatIsCheaperThanJitaViewName,
+'''.format(cheap=whatIsCheaperThanJitaViewName,
            size=itemPackagedSizesViewName,
            secBuy=secFilteredBuyOrdersViewName,
            secSell=secFilteredSellOrdersViewName,
            priceCoeff=priceCoeff,
            taxCoeff=taxCoeff,
            minProfitPerM3=minProfitPerM3,
-           buyLocationConstraint=buyLocationConstraint
+           buyLocationConstraint=buyLocationConstraint,
+           jitaHigh=jitaHighestBidViewName
            )

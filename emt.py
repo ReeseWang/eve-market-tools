@@ -161,10 +161,11 @@ class EMT(cmd.Cmd):
         self.buyt.clear_rows()
 
     def do_haultojita(self, arg):
+        self.db.execSQL(sqlqueries.pickHaulToJitaItemLocationCombination())
         pass
 
     def do_test(self, arg):
-        c = self.db.execSQL(sqlqueries.test)
+        c = self.db.execSQL(sqlqueries.pickHaulToJitaItemLocationCombination())
         rows = c.fetchall()
         table = PrettyTable()
         for row in rows:
@@ -237,7 +238,12 @@ class EMT(cmd.Cmd):
         self.db.execSQLScript(sqlqueries.createSecFilteredMarketsView(0.45, 1))
         self.db.execSQLScript(sqlqueries.createSecFilteredOrdersView())
         self.db.execSQLScript(sqlqueries.createItemPackagedVolumesView())
-        self.db.execSQLScript(sqlqueries.createWhatWhereCheaperThanJitaView())
+        self.db.execSQLScript(
+            sqlqueries.createWhatWhereCheaperThanJitaView(
+                taxCoeff=self.taxCoeff,
+                minProfitPerM3=self.minProfitPerM3,
+                minMargin=self.minMargin)
+        )
 
 
 if __name__ == '__main__':
