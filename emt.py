@@ -160,23 +160,10 @@ class EMT(cmd.Cmd):
         print(self.buyt)
         self.buyt.clear_rows()
 
-    def evaluateProfitability(self, pair):
-        print(pair)
-        pass
-
     def do_haultojita(self, arg):
-        print('Looking for cheap stuff...')
-        self.db.execSQLScript(
-            sqlqueries.createCheapThanJitaTable(
-                taxCoeff=self.taxCoeff,
-                minProfitPerM3=self.minProfitPerM3,
-                minMargin=self.minMargin)
-        )
-        print('Summarizing item and location...')
-        c = self.db.execSQL(sqlqueries.pickHaulToJitaItemLocationCombination())
-        li = c.fetchall()
-        for pair in li:
-            self.evaluateProfitability(pair)
+        from haultojita import HaulToJita
+        subtool = HaulToJita(self.db)
+        subtool.cmdloop()
         pass
 
     def do_test(self, arg):
