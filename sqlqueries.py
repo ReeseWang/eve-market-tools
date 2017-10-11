@@ -8,49 +8,63 @@ whatIsCheaperThanJitaViewName = 'cheaperThanJita'
 itemPackagedSizesViewName = 'packSizes'
 jitaHighestBidViewName = 'jitaHigh'
 
+names = {
+    'pubStruct' : 'publicStructures',
+    'buy' : 'buyOrders',
+    'sell' : 'sellOrders',
+    'secMarket' : 'secFilteredMarket',
+    'secBuy' : 'secFilteredBuyOrders',
+    'secSell' : 'secFilteredSellOrders',
+    'packSize' : 'itemPackagedSizes',
+    'cheap' : 'secFilteredSellCheaperThanJita',
+    'jitaHigh' : 'jitaHighestBidPrices'
+}
+
 test = '''SELECT
     *
 FROM
-    {table}
+    {cheap}
 ORDER BY
     maxMargin DESC
 LIMIT 30;
-'''.format(table=whatIsCheaperThanJitaViewName)
+'''.format_map(names)
 
 
 def getWhatInWhereHasCheaperThanJita(groupby='region_id'):
+    names['groupby']=groupby
     return '''SELECT
     type_id,
     {groupby}
 FROM
-    {table}
+    {cheap}
 WHERE
     maxMargin > ? AND maxProfitPerM3 > ?
 GROUP BY
     type_id,
     {groupby};
-'''.format(table=whatIsCheaperThanJitaViewName,
-           groupby=goupby)
+'''.format_map(names)
 
 
 def createSecFilteredMarketsView(minSec=-1, maxSec=1):
-    return ('''DROP VIEW IF EXISTS {0};
-CREATE TEMP VIEW IF NOT EXISTS {0}
-AS'''.format(secFilteredMarketsViewName) + '''
+    names['minSec'] = minSec
+    names['maxSec'] = maxSec
+    return ('''DROP VIEW IF EXISTS {secMarket};
+CREATE TEMP VIEW IF NOT EXISTS {secMarket}
+AS
 SELECT
     structure_id AS stationID,
-    {0}.name AS stationName,
+    {pubStruct}.name AS stationName,
     solar_system_id as solarSystemId,
-    {0}.x AS x,
-    {0}.y AS y,
-    {0}.z AS z,
+    {pubStruct}.x AS x,
+    {pubStruct}.y AS y,
+    {pubStruct}.z AS z,
     mapSolarSystems.constellationID AS constellationID,
     mapSolarSystems.security AS security
 FROM
-    {0}
+    {pubStruct}
 INNER JOIN mapSolarSystems ON
-    mapSolarSystems.solarSystemId = {0}.solar_system_id
-WHERE'''.format(publicStructuresTableName) + '''
+    mapSolarSystems.solarSystemId = {pubStruct}.solar_system_id
+WHERE
     {minSec} < mapSolarSystems.security AND mapSolarSystems.security < {maxSec}
 UNION ALL
 SELECT
@@ -67,7 +81,7 @@ FROM
 WHERE
     {minSec} < security AND security < {maxSec}
 ;
-''').format(minSec=minSec, maxSec=maxSec)
+''').format_map(names)
 
 
 def createSecFilteredOrdersView():
@@ -135,11 +149,7 @@ INNER JOIN invNames AS invNamesC ON
 INNER JOIN invNames AS invNamesR ON
     invNamesR.itemID = region_id
 ;
-'''.format(secBuy=secFilteredBuyOrdersViewName,
-           buy=buyOrdersTableName,
-           secSell=secFilteredSellOrdersViewName,
-           sell=sellOrdersTableName,
-           secMarket=secFilteredMarketsViewName)
+'''.format_map(names)
 
 
 def listSellOrders():
@@ -153,13 +163,13 @@ def listSellOrders():
     updated,
     issued
 FROM
-    {table}
+    {secSell}
 WHERE
     type_id = ?
 ORDER BY
     price ASC
 LIMIT 20;
-'''.format(table=secFilteredSellOrdersViewName)
+'''.format_map(names)
 
 
 def listBuyOrders():
@@ -175,17 +185,17 @@ def listBuyOrders():
     updated,
     issued
 FROM
-    {table}
+    {secBuy}
 WHERE
     type_id = ?
 ORDER BY
     price DESC
 LIMIT 20;
-'''.format(table=secFilteredBuyOrdersViewName)
+'''.format_map(names)
 
 
 def createItemPackagedVolumesView():
-    return '''CREATE TEMP VIEW IF NOT EXISTS {view}
+    return '''CREATE TEMP VIEW IF NOT EXISTS {packSize}
 AS
 SELECT
     typeID,
@@ -200,7 +210,7 @@ FROM
     invTypes
 WHERE
     typeID NOT IN (SELECT typeID FROM invVolumes);
-'''.format(view=itemPackagedSizesViewName)
+'''.format_map(names)
 
 
 def pickHaulToJitaTargetSellOrders():
@@ -221,10 +231,10 @@ WHERE
 def pickHaulToJitaItemLocationCombination():
     return '''SELECT
     {cheap}.type_id,
-    region_id,
+    region_id
 FROM
     {cheap}
-'''.format(cheap=whatIsCheaperThanJitaViewName)
+'''.format_map(names)
 
 
 jitaBelongTo = {
@@ -239,18 +249,20 @@ def createWhatWhereCheaperThanJitaView(taxCoeff=0.98,
                                        minMargin=0.1,
                                        jitaRange='constellation'):
     assert 0 < taxCoeff < 1
-    priceCoeff = taxCoeff / (1 + minMargin)
-    buyLocationConstraint = jitaBelongTo[jitaRange]
+    names['priceCoeff'] = taxCoeff / (1 + minMargin)
+    names['buyLocConstraint'] = jitaBelongTo[jitaRange]
+    names['minProfitPerM3'] = minProfitPerM3
+    names['taxCoeff'] = taxCoeff
     return '''DROP VIEW IF EXISTS {jitaHigh};
 CREATE TEMP VIEW {jitaHigh}
 AS
 SELECT
     type_id,
-    MAX(price) as maxBid
+    MAX(price) AS maxBid
 FROM
     {secBuy}
 WHERE
-    {buyLocationConstraint}
+    {buyLocConstraint}
 GROUP BY
     type_id;
 DROP VIEW IF EXISTS {cheap};
@@ -259,7 +271,7 @@ AS
 SELECT
     order_id,
     volume_remain,
-    {size}.volume AS size,
+    {packSize}.volume AS size,
     {secSell}.type_id AS type_id,
     location_id,
     region_id,
@@ -267,21 +279,12 @@ SELECT
     solarSystemID
 FROM {secSell}
 INNER JOIN {jitaHigh} ON
-    jitaHigh.type_id = {secSell}.type_id
-INNER JOIN {size} ON
-    {size}.typeID = {secSell}.type_id
+    {jitaHigh}.type_id = {secSell}.type_id
+INNER JOIN {packSize} ON
+    {packSize}.typeID = {secSell}.type_id
 WHERE
-    {secSell}.price < jitaHigh.maxBid * {priceCoeff}
+    {secSell}.price < {jitaHigh}.maxBid * {priceCoeff}
     AND
-    jitaHigh.maxBid * {taxCoeff} - {secSell}.price >
-    {minProfitPerM3} * {size}.volume;
-'''.format(cheap=whatIsCheaperThanJitaViewName,
-           size=itemPackagedSizesViewName,
-           secBuy=secFilteredBuyOrdersViewName,
-           secSell=secFilteredSellOrdersViewName,
-           priceCoeff=priceCoeff,
-           taxCoeff=taxCoeff,
-           minProfitPerM3=minProfitPerM3,
-           buyLocationConstraint=buyLocationConstraint,
-           jitaHigh=jitaHighestBidViewName
-           )
+    {jitaHigh}.maxBid * {taxCoeff} - {secSell}.price >
+    {minProfitPerM3} * {packSize}.volume;
+'''.format_map(names)
