@@ -14,6 +14,11 @@ names = {
     'secSell' : 'secFilteredSellOrders',
     # View of item sizes, packaged size if it has this property.
     'packSize' : 'itemPackagedSizes',
+    # View of buy orders in Jita,
+    # can be expanded to be in same system/constellation/region with Jita
+    # according to given parameter.
+    # Security filtered.
+    'jitaBuyOrders' : 'jitaBuyOrders',
     # Table of sell orders which is cheaper than Jita highest bid price
     # and satisfies some constraints.
     'cheap' : 'secFilteredSellCheaperThanJita',
@@ -231,10 +236,13 @@ WHERE
 
 def pickHaulToJitaItemLocationCombination():
     return '''SELECT
-    {cheap}.type_id,
+    type_id,
     region_id
 FROM
     {cheap}
+GROUP BY
+    type_id,
+    region_id;
 '''.format_map(names)
 
 
@@ -254,16 +262,23 @@ def createCheapThanJitaTable(taxCoeff=0.98,
     names['buyLocConstraint'] = jitaBelongTo[jitaRange]
     names['minProfitPerM3'] = minProfitPerM3
     names['taxCoeff'] = taxCoeff
-    return '''DROP VIEW IF EXISTS {jitaHigh};
+    return '''DROP VIEW IF EXISTS {jitaBuyOrders};
+CREATE TEMP VIEW {jitaBuyOrders}
+AS
+SELECT
+    *
+FROM
+    {secBuy}
+WHERE
+    {buyLocConstraint};
+DROP VIEW IF EXISTS {jitaHigh};
 CREATE TEMP VIEW {jitaHigh}
 AS
 SELECT
     type_id,
     MAX(price) AS maxBid
 FROM
-    {secBuy}
-WHERE
-    {buyLocConstraint}
+    {jitaBuyOrders}
 GROUP BY
     type_id;
 DROP TABLE IF EXISTS {cheap};
