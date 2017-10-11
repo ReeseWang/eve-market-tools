@@ -160,11 +160,32 @@ class EMT(cmd.Cmd):
         print(self.buyt)
         self.buyt.clear_rows()
 
+    def evaluateProfitability(self, pair):
+        print(pair)
+        pass
+
     def do_haultojita(self, arg):
-        self.db.execSQL(sqlqueries.pickHaulToJitaItemLocationCombination())
+        print('Looking for cheap stuff...')
+        self.db.execSQLScript(
+            sqlqueries.createCheapThanJitaTable(
+                taxCoeff=self.taxCoeff,
+                minProfitPerM3=self.minProfitPerM3,
+                minMargin=self.minMargin)
+        )
+        print('Summarizing item and location...')
+        c = self.db.execSQL(sqlqueries.pickHaulToJitaItemLocationCombination())
+        li = c.fetchall()
+        for pair in li:
+            self.evaluateProfitability(pair)
         pass
 
     def do_test(self, arg):
+        self.db.execSQLScript(
+            sqlqueries.createCheapThanJitaTable(
+                taxCoeff=self.taxCoeff,
+                minProfitPerM3=self.minProfitPerM3,
+                minMargin=self.minMargin)
+        )
         c = self.db.execSQL(sqlqueries.pickHaulToJitaItemLocationCombination())
         rows = c.fetchall()
         table = PrettyTable()
@@ -238,12 +259,6 @@ class EMT(cmd.Cmd):
         self.db.execSQLScript(sqlqueries.createSecFilteredMarketsView(0.45, 1))
         self.db.execSQLScript(sqlqueries.createSecFilteredOrdersView())
         self.db.execSQLScript(sqlqueries.createItemPackagedVolumesView())
-        self.db.execSQLScript(
-            sqlqueries.createCheapThanJitaTable(
-                taxCoeff=self.taxCoeff,
-                minProfitPerM3=self.minProfitPerM3,
-                minMargin=self.minMargin)
-        )
 
 
 if __name__ == '__main__':
