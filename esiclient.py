@@ -55,7 +55,7 @@ class AuthedClient:
     def updateAuthHeader(self):
         self.headers = {
                 'Authorization': self.tokenData['token_type'] + ' ' +
-                        self.tokenData['access_token']
+                self.tokenData['access_token']
                 }
         pass
 
@@ -190,8 +190,9 @@ class AuthedClient:
                                 errorRemain)
                         )
                         time.sleep(10)
-                except Exception as error:
-                    self.logger.critical(str(error))
+                except Exception as e:
+                    self.logger.critical('Unexpected error in ESI client.',
+                                         exc_info=e)
                     return
 
     def post(self, url, data=None):
@@ -199,17 +200,19 @@ class AuthedClient:
             response = requests.post(url, data, headers=self.headers)
             response.raise_for_status()
             return response
-        except requests.exceptions.HTTPError as error:
+        except requests.exceptions.HTTPError as e:
             if 'expired' in response.text:
                 self.getToken('refresh')
                 response = requests.get(url, headers=self.headers)
                 return response
             else:
-                import sys
-                sys.exit(error)
-        except Exception as error:
-            import sys
-            sys.exit(error)
+                self.logger.critical('Unexpected error in ESI client.',
+                                     exc_info=e)
+                return
+        except Exception as e:
+            self.logger.critical('Unexpected error in ESI client.',
+                                 exc_info=e)
+            return
 
     def getCharacterID(self):
         cha = self.get('https://login.eveonline.com/oauth/verify').json()
