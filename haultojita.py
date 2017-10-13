@@ -9,8 +9,11 @@ class HaulToJita(cmd.Cmd):
     def evalProfit(self, pair):
         c = self.db.execSQL(sqlqueries.pickHaulToJitaTargetSellOrders(), pair)
         sell = c.fetchall()
-        c = self.db.execSQL(sqlqueries.pickHaulToJitaTargetBuyOrders(), pair[0])
+        print(sell)
+        c = self.db.execSQL(sqlqueries.pickHaulToJitaTargetBuyOrders(),
+                            (pair[0],))
         buy = c.fetchall()
+        print(buy)
         pass
 
     def postcmd(self, stop, line):

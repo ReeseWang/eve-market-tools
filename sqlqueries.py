@@ -219,7 +219,7 @@ WHERE
     typeID = ?
 ORDER BY
     price DESC;
-'''
+'''.format_map(names)
 
 
 def pickHaulToJitaTargetSellOrders():
@@ -292,6 +292,7 @@ CREATE TABLE {cheap}
 AS
 SELECT
     orderID,
+    {secSell}.price AS price,
     volumeRemain,
     {secSell}.typeID AS typeID,
     locationID,
