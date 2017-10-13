@@ -23,7 +23,9 @@ names = {
     # and satisfies some constraints.
     'cheap': 'secFilteredSellCheaperThanJita',
     # View of highest bid prices of each type of items in Jita
-    'jitaHigh': 'jitaHighestBidPrices'
+    'jitaHigh': 'jitaHighestBidPrices',
+    # Table of selected buy-sell order pairs which can bring proit
+    'orderPairs': 'orderPairsOfInterest'
 }
 
 test = '''SELECT
@@ -203,6 +205,23 @@ FROM
     invTypes
 WHERE
     typeID NOT IN (SELECT typeID FROM invVolumes);
+'''.format_map(names)
+
+
+def createOrderPairsTable():
+    # WARNING: From now on, 'buy' and 'sell' is from traders
+    # perspective.
+    return '''DROP TABLE IF EXISTS {orderPairs};
+CREATE TABLE {orderPairs} (
+    typeID INTEGER NOT NULL,
+    buyOrderID INTEGER PRIMARY KEY,
+    sellOrderID INTEGER PRIMARY KEY,
+    buyPrice REAL NOT NULL,
+    sellPrice REAL NOT NULL,
+    volume INTEGER NOT NULL,
+    buyRegion INTEGER NOT NULL,
+    sellRegion INTEGER NOT NULL
+);
 '''.format_map(names)
 
 
