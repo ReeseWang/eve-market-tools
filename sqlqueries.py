@@ -1,29 +1,29 @@
 names = {
     # Public Structures table created by syncdyn
-    'pubStruct' : 'publicStructures',
+    'pubStruct': 'publicStructures',
     # Buy orders table created by syncdyn
-    'buy' : 'buyOrders',
+    'buy': 'buyOrders',
     # Sell orders table created by syncdyn
-    'sell' : 'sellOrders',
+    'sell': 'sellOrders',
     # View of markets (stations and citadels) which sit in solar systems
     # whose security status satisfies given constraints.
-    'secMarket' : 'secFilteredMarket',
+    'secMarket': 'secFilteredMarket',
     # View of buy orders which sits in said markets.
-    'secBuy' : 'secFilteredBuyOrders',
+    'secBuy': 'secFilteredBuyOrders',
     # View of sell orders which sits in said markets.
-    'secSell' : 'secFilteredSellOrders',
+    'secSell': 'secFilteredSellOrders',
     # View of item sizes, packaged size if it has this property.
-    'packSize' : 'itemPackagedSizes',
+    'packSize': 'itemPackagedSizes',
     # View of buy orders in Jita,
     # can be expanded to be in same system/constellation/region with Jita
     # according to given parameter.
     # Security filtered.
-    'jitaBuyOrders' : 'jitaBuyOrders',
+    'jitaBuyOrders': 'jitaBuyOrders',
     # Table of sell orders which is cheaper than Jita highest bid price
     # and satisfies some constraints.
-    'cheap' : 'secFilteredSellCheaperThanJita',
+    'cheap': 'secFilteredSellCheaperThanJita',
     # View of highest bid prices of each type of items in Jita
-    'jitaHigh' : 'jitaHighestBidPrices'
+    'jitaHigh': 'jitaHighestBidPrices'
 }
 
 test = '''SELECT
@@ -37,7 +37,7 @@ LIMIT 30;
 
 
 def getWhatInWhereHasCheaperThanJita(groupby='region_id'):
-    names['groupby']=groupby
+    names['groupby'] = groupby
     return '''SELECT
     type_id,
     {groupby}
@@ -71,7 +71,9 @@ FROM
 INNER JOIN mapSolarSystems ON
     mapSolarSystems.solarSystemId = {pubStruct}.solar_system_id
 WHERE
-    {minSec} <= mapSolarSystems.security AND mapSolarSystems.security <= {maxSec}
+    {minSec} <= mapSolarSystems.security
+    AND
+    mapSolarSystems.security <= {maxSec}
 UNION ALL
 SELECT
     stationID,
@@ -219,6 +221,22 @@ WHERE
 '''.format_map(names)
 
 
+def pickHaulToJitaTargetBuyOrders():
+    return '''SELECT
+    order_id,
+    location_id,
+    volume_remain,
+    min_volume,
+    price
+FROM
+    {jitaBuyOrders}
+WHERE
+    type_id = ?
+ORDER BY
+    price DESC;
+'''
+
+
 def pickHaulToJitaTargetSellOrders():
     return '''SELECT
     order_id,
@@ -226,12 +244,14 @@ def pickHaulToJitaTargetSellOrders():
     volume_remain,
     price
 FROM
-    {secSell}
+    {cheap}
 WHERE
-    {secSell}.type_id = ?
+    type_id = ?
     AND
     region_id = ?
-'''
+ORDER BY
+    price ASC;
+'''.format_map(names)
 
 
 def pickHaulToJitaItemLocationCombination():
@@ -253,10 +273,11 @@ jitaBelongTo = {
     'station': 'location_id = 50003760'
 }
 
+
 def createCheapThanJitaTable(taxCoeff=0.98,
-                                       minProfitPerM3=500.0,
-                                       minMargin=0.1,
-                                       jitaRange='constellation'):
+                             minProfitPerM3=500.0,
+                             minMargin=0.1,
+                             jitaRange='constellation'):
     assert 0 < taxCoeff < 1
     names['priceCoeff'] = taxCoeff / (1 + minMargin)
     names['buyLocConstraint'] = jitaBelongTo[jitaRange]

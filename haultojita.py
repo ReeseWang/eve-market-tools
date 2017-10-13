@@ -7,6 +7,10 @@ class HaulToJita(cmd.Cmd):
     prompt = 'Haul To Jita > '
 
     def evalProfit(self, pair):
+        c = self.db.execSQL(sqlqueries.pickHaulToJitaTargetSellOrders(), pair)
+        sell = c.fetchall()
+        c = self.db.execSQL(sqlqueries.pickHaulToJitaTargetBuyOrders(), pair[0])
+        buy = c.fetchall()
         pass
 
     def postcmd(self, stop, line):
@@ -24,7 +28,7 @@ class HaulToJita(cmd.Cmd):
                  db,
                  taxCoeff=0.98,
                  minProfitPerM3=500.0,
-                 minMargin=0.1):
+                 minMargin=0.001):
         super().__init__()
         self.logger = logging.getLogger(__name__)
         self.db = db
@@ -41,4 +45,6 @@ class HaulToJita(cmd.Cmd):
         print('Summarizing item and location...')
         c = self.db.execSQL(sqlqueries.pickHaulToJitaItemLocationCombination())
         li = c.fetchall()
-        print(li)
+        # print(li)
+        for pair in li:
+            self.evalProfit(pair)
