@@ -36,21 +36,6 @@ LIMIT 30;
 '''.format_map(names)
 
 
-def getWhatInWhereHasCheaperThanJita(groupby='region_id'):
-    names['groupby'] = groupby
-    return '''SELECT
-    type_id,
-    {groupby}
-FROM
-    {cheap}
-WHERE
-    maxMargin > ? AND maxProfitPerM3 > ?
-GROUP BY
-    type_id,
-    {groupby};
-'''.format_map(names)
-
-
 def createSecFilteredMarketsView(minSec=-1, maxSec=1):
     names['minSec'] = minSec
     names['maxSec'] = maxSec
@@ -96,13 +81,13 @@ def createSecFilteredOrdersView():
     return '''CREATE TEMP VIEW IF NOT EXISTS {secBuy}
 AS
 SELECT
-    order_id,
-    type_id,
-    location_id,
-    region_id,
-    volume_total,
-    volume_remain,
-    min_volume,
+    order_id AS orderID,
+    type_id AS typeID,
+    location_id AS locationID,
+    region_id AS regionID,
+    volume_total AS volumeTotal,
+    volume_remain AS volumeRemain,
+    min_volume AS minVolume,
     price,
     range,
     duration,
@@ -129,12 +114,12 @@ INNER JOIN invNames AS invNamesR ON
 CREATE TEMP VIEW IF NOT EXISTS {secSell}
 AS
 SELECT
-    order_id,
-    type_id,
-    location_id,
-    region_id,
-    volume_total,
-    volume_remain,
+    order_id AS orderID,
+    type_id AS typeID,
+    location_id AS locationID,
+    region_id AS regionID,
+    volume_total AS volumeTotal,
+    volume_remain AS volumeRemain,
     price,
     duration,
     issued,
@@ -166,14 +151,14 @@ def listSellOrders():
     regionName,
     solarSystemName,
     stationName,
-    volume_remain,
+    volumeRemain,
     price,
     updated,
     issued
 FROM
     {secSell}
 WHERE
-    type_id = ?
+    typeID = ?
 ORDER BY
     price ASC
 LIMIT 20;
@@ -186,16 +171,16 @@ def listBuyOrders():
     regionName,
     solarSystemName,
     stationName,
-    volume_remain,
+    volumeRemain,
     price,
-    min_volume,
+    minVolume,
     range,
     updated,
     issued
 FROM
     {secBuy}
 WHERE
-    type_id = ?
+    typeID = ?
 ORDER BY
     price DESC
 LIMIT 20;
@@ -223,15 +208,15 @@ WHERE
 
 def pickHaulToJitaTargetBuyOrders():
     return '''SELECT
-    order_id,
-    location_id,
-    volume_remain,
-    min_volume,
+    orderID,
+    locationID,
+    volumeRemain,
+    minVolume,
     price
 FROM
     {jitaBuyOrders}
 WHERE
-    type_id = ?
+    typeID = ?
 ORDER BY
     price DESC;
 '''
@@ -239,16 +224,16 @@ ORDER BY
 
 def pickHaulToJitaTargetSellOrders():
     return '''SELECT
-    order_id,
-    location_id,
-    volume_remain,
+    orderID,
+    locationID,
+    volumeRemain,
     price
 FROM
     {cheap}
 WHERE
-    type_id = ?
+    typeID = ?
     AND
-    region_id = ?
+    regionID = ?
 ORDER BY
     price ASC;
 '''.format_map(names)
@@ -256,21 +241,21 @@ ORDER BY
 
 def pickHaulToJitaItemLocationCombination():
     return '''SELECT
-    type_id,
-    region_id
+    typeID,
+    regionID
 FROM
     {cheap}
 GROUP BY
-    type_id,
-    region_id;
+    typeID,
+    regionID;
 '''.format_map(names)
 
 
 jitaBelongTo = {
-    'region': 'region_id = 10000002',
+    'region': 'regionID = 10000002',
     'constellation': 'constellationID = 20000020',
     'solarsystem': 'solarSystemID = 30000142',
-    'station': 'location_id = 50003760'
+    'station': 'locationID = 50003760'
 }
 
 
@@ -296,28 +281,28 @@ DROP VIEW IF EXISTS {jitaHigh};
 CREATE TEMP VIEW {jitaHigh}
 AS
 SELECT
-    type_id,
+    typeID,
     MAX(price) AS maxBid
 FROM
     {jitaBuyOrders}
 GROUP BY
-    type_id;
+    typeID;
 DROP TABLE IF EXISTS {cheap};
 CREATE TABLE {cheap}
 AS
 SELECT
-    order_id,
-    volume_remain,
-    {secSell}.type_id AS type_id,
-    location_id,
-    region_id,
+    orderID,
+    volumeRemain,
+    {secSell}.typeID AS typeID,
+    locationID,
+    regionID,
     constellationID,
     solarSystemID
 FROM {secSell}
 INNER JOIN {jitaHigh} ON
-    {jitaHigh}.type_id = {secSell}.type_id
+    {jitaHigh}.typeID = {secSell}.typeID
 INNER JOIN {packSize} ON
-    {packSize}.typeID = {secSell}.type_id
+    {packSize}.typeID = {secSell}.typeID
 WHERE
     {secSell}.price < {jitaHigh}.maxBid * {priceCoeff}
     AND
