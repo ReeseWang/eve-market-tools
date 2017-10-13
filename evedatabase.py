@@ -37,7 +37,7 @@ class Database:
     def cacheTableToMemory(self, table):
         c = self.execSQL("SELECT sql FROM hdd.sqlite_master "
                          "WHERE name = ? AND type = 'table';", (table,))
-        sql = c.fetchone()[0]
+        sql = c.fetchone()['sql']
         self.execSQL("DROP TABLE IF EXISTS main.{};".format(table))
         self.execSQLScript(
             sql +
@@ -51,31 +51,32 @@ class Database:
                          cols=cols)
 
     def getStationSecurity(self, stationID):
-        res = self.getStation(stationID, cols='security')
+        res = self._getStation(stationID, cols='security')
         if res:
-            return res[0]
+            return res['security']
 
     def getStationSolarSystem(self, stationID):
-        res = self._getStation(stationID, cols='solarSystemID')[0]
+        res = self._getStation(stationID, cols='solarSystemID')
         if res:
-            return res[0]
+            return res['solarSystemID']
 
     def getStationConstellation(self, stationID):
-        res = self.getStation(stationID, cols='constellationID')
+        res = self._getStation(stationID, cols='constellationID')
         if res:
-            return res[0]
+            return res['constellationID']
 
     def getStationRegion(self, stationID):
         res = self._getStation(stationID, cols='regionID')
         if res:
-            return res[0]
+            return res['regionID']
 
     def _cacheItemsPackVols(self):
         res = self.execSQL(
             "SELECT typeID, volume FROM hdd.invVolumes;").fetchall()
         self.logger.info("Found {} item types "
                          "which has packaged volume.".format(len(res)))
-        self.typesPackVol = {str(t[0]): t[1] for t in res}
+        print(res[0])
+        self.typesPackVol = {str(t['typeID']): t['volume'] for t in res}
 
     def _getType(self, typeID, cols):
         return self._get(typeID,
@@ -91,19 +92,19 @@ class Database:
             return vol
         else:
             return self._getType(typeID,
-                                 cols='volume')[0]
+                                 cols='volume')['volume']
 
     def getTypeName(self, typeID):
         res = self._getType(typeID,
                             cols='typeName')
         if res:
-            return res[0]
+            return res['typeName']
 
     def getItemName(self, itemID):
         return self._get(itemID,
                          idcol='itemID',
                          table='invNames',
-                         cols='itemName')[0]
+                         cols='itemName')['itemName']
 
     def _getSolarSystem(self, solarSystemID, cols):
         return self._get(solarSystemID,
@@ -113,7 +114,7 @@ class Database:
 
     def getSolarSystemSecurity(self, solarSystemID):
         return self._getSolarSystem(solarSystemID,
-                                    cols='security')[0]
+                                    cols='security')['security']
 
     def cacheSDETables(self):
         with self.sdeLock:
@@ -170,6 +171,7 @@ class Database:
 
         self._conn = sqlite3.connect(':memory:',
                                      check_same_thread=False)
+        self._conn.row_factory = sqlite3.Row
 
         self.cacheSDETables()
         self.marketDBPath = './db/market.sqlite'

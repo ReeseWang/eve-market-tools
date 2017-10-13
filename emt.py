@@ -94,20 +94,20 @@ class EMT(cmd.Cmd):
         for e in li:
             self.sellt.add_row(
                 [
-                    '{:.1f} '.format(e[0]) +
+                    '{:.1f} '.format(e['security']) +
                     ' - '.join(
                         [
-                            e[1],  # Region name
-                            e[2],  # Solar system name
+                            e['regionName'],  # Region name
+                            e['solarSystemName'],  # Solar system name
                             # Station name, solar system name inc.
                             # e[3][0:50]
                         ]
                     ),
-                    format(e[4], ',d'),  # Volume remain
-                    format(e[5], ',.2f'),  # Price
-                    format(e[4]*e[5], ',.2f'),  # Sum
-                    timefmt(e[6], 1),  # Updated
-                    timefmt(e[7], 3)  # Issued
+                    format(e['volumeRemain'], ',d'),  # Volume remain
+                    format(e['price'], ',.2f'),  # Price
+                    format(e['price']*e['volumeRemain'], ',.2f'),  # Sum
+                    timefmt(e['updated'], 1),  # Updated
+                    timefmt(e['issued'], 3)  # Issued
                 ]
             )
             pass
@@ -138,22 +138,22 @@ class EMT(cmd.Cmd):
         for e in li:
             self.buyt.add_row(
                 [
-                    '{:.1f} '.format(e[0]) +
+                    '{:.1f} '.format(e['security']) +
                     ' - '.join(
                         [
-                            e[1],  # Region name
-                            e[2],  # Solar system name
+                            e['regionName'],  # Region name
+                            e['solarSystemName'],  # Solar system name
                             # Station name, solar system name inc.
                             # e[3][0:40]
                         ]
                     ),
-                    format(e[4], ',d'),  # Volume remain
-                    format(e[5], ',.2f'),  # Price
-                    format(e[4]*e[5], ',.2f'),  # Sum
-                    format(e[6], ',d'),  # Min volume
-                    rangeString(e[7]),  # Range
-                    timefmt(e[8], 1),  # Updated
-                    timefmt(e[9], 3)  # Issued
+                    format(e['volumeRemain'], ',d'),  # Volume remain
+                    format(e['price'], ',.2f'),  # Price
+                    format(e['price']*e['volumeRemain'], ',.2f'),  # Sum
+                    format(e['minVolume'], ',d'),  # Min volume
+                    rangeString(e['range']),  # Range
+                    timefmt(e['updated'], 1),  # Updated
+                    timefmt(e['issued'], 3)  # Issued
                 ]
             )
             pass
