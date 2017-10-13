@@ -208,26 +208,35 @@ WHERE
 '''.format_map(names)
 
 
+insertOrderPairsQuery = (
+    "INSERT INTO {orderPairs} VALUES (".format_map(names) +
+    ','.join(8*'?') +
+    ");"
+)
+
 def createOrderPairsTable():
     # WARNING: From now on, 'buy' and 'sell' is from traders
     # perspective.
     return '''DROP TABLE IF EXISTS {orderPairs};
 CREATE TABLE {orderPairs} (
     typeID INTEGER NOT NULL,
-    buyOrderID INTEGER PRIMARY KEY,
-    sellOrderID INTEGER PRIMARY KEY,
+    buyOrderID INTEGER NOT NULL,
+    sellOrderID INTEGER NOT NULL,
     buyPrice REAL NOT NULL,
     sellPrice REAL NOT NULL,
     volume INTEGER NOT NULL,
-    buyRegion INTEGER NOT NULL,
-    sellRegion INTEGER NOT NULL
+    buyRegionID INTEGER NOT NULL,
+    sellRegionID INTEGER NOT NULL,
+    PRIMARY KEY (buyOrderID, sellOrderID)
 );
 '''.format_map(names)
 
 
 def pickHaulToJitaTargetBuyOrders():
     return '''SELECT
+    typeID,
     orderID,
+    regionID,
     locationID,
     volumeRemain,
     minVolume,
@@ -243,7 +252,9 @@ ORDER BY
 
 def pickHaulToJitaTargetSellOrders():
     return '''SELECT
+    typeID,
     orderID,
+    regionID,
     locationID,
     volumeRemain,
     price
