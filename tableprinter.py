@@ -43,6 +43,19 @@ regionTradeSumTable.align = 'r'
 regionTradeSumTable.align['From Region'] = 'l'
 regionTradeSumTable.align['To Region'] = 'l'
 
+shoppingListTable = PrettyTable()
+shoppingListTable.field_names = [
+    '',
+    'Item Name',
+    'Qty.',
+    'Min Price / ISK',
+    'Max Target Bid / ISK',
+    'Min Target Bid / ISK',
+    'Profit / ISK'
+]
+shoppingListTable.align = 'r'
+shoppingListTable.align['Item Name'] = 'l'
+
 
 def ISK(price):
     return format(price, ',.2f')
@@ -85,7 +98,7 @@ def printSellOrdersTable(li):
     for i, e in enumerate(li):
         sellOrdersTable.add_row(
             [
-                i,
+                i+1,
                 '{:.1f} '.format(e['security']) +
                 ' - '.join(
                     [
@@ -125,7 +138,7 @@ def printBuyOrdersTable(li):
     for i, e in enumerate(li):
         buyOrdersTable.add_row(
             [
-                i,
+                i+1,
                 '{:.1f} '.format(e['security']) +
                 ' - '.join(
                     [
@@ -153,7 +166,7 @@ def printRegionTradeSumTable(li):
     for i, e in enumerate(li):
         regionTradeSumTable.add_row(
             [
-                i,
+                i+1,
                 e['buyRegionName'],
                 ISK(e['buyTotalISK']),
                 ISK(e['profit']),
@@ -163,3 +176,22 @@ def printRegionTradeSumTable(li):
         )
         pass
     print(regionTradeSumTable)
+
+
+def printShoppingListTable(li):
+    shoppingListTable.clear_rows()
+    for i, e in enumerate(li):
+        shoppingListTable.add_row(
+            [
+                i+1,
+                e['buyTypeName'],
+                format(e['volTotal'], ',d'),
+                ISK(e['minBuy']),
+                ISK(e['maxSell']),
+                ISK(e['minSell']),
+                ISK(e['profit'])
+            ]
+        )
+        pass
+    print(shoppingListTable)
+

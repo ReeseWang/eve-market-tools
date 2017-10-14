@@ -216,11 +216,13 @@ insertOrderPairsQuery = (
 )
 
 summarizeRegionProfit = '''SELECT
+    buyRegionID,
     buyRegionName,
     SUM(buyPrice * volume) AS buyTotalISK,
     SUM((? * sellPrice - buyPrice) * volume) AS profit,
     SUM(sellPrice * volume) AS sellTotalISK,
-    sellRegionName
+    sellRegionName,
+    sellRegionID
 FROM
     {orderPairsView}
 GROUP BY
@@ -236,7 +238,7 @@ buyListInRegion = '''SELECT
     MIN(buyPrice) AS minBuy,
     MAX(sellPrice) AS maxSell,
     MIN(sellPrice) AS minSell,
-    SUM((? * sellPrice - buyPrice) * volume) AS profit,
+    SUM((? * sellPrice - buyPrice) * volume) AS profit
 FROM
     {orderPairsView}
 WHERE

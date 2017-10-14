@@ -3,6 +3,25 @@ import logging
 import sqlqueries
 from prettytable import PrettyTable
 import tableprinter
+from esiclient import AuthedClient
+
+
+def checkInputIdx(arg, li):
+    if not arg:
+        print('Please provide a row number.')
+        return
+    else:
+        try:
+            num = int(arg)
+        except ValueError:
+            print('Please provide a valid integer.')
+            return
+        if not 1 <= num <= len(li):
+            print('Row number out of range (1 to {} '
+                  'accepted).'.format(len(li)))
+            return
+        else:
+            return num-1
 
 
 class HaulToJita(cmd.Cmd):
@@ -102,6 +121,21 @@ class HaulToJita(cmd.Cmd):
         print('Bye!')
         return True
 
+    def do_marketdetail(self, arg):
+        idx = checkInputIdx(arg, self.shoppinglist)
+        if idx is not None:
+            self.client.openMarketDetail(self.shoppinglist[idx]['buyTypeID'])
+
+    def do_shoppinglist(self, arg):
+        idx = checkInputIdx(arg, self.summaryList)
+        if idx is not None:
+            c = self.db.execSQL(sqlqueries.buyListInRegion,
+                                (self.taxCoeff,
+                                 self.summaryList[idx]['buyRegionID']))
+            self.shoppinglist = c.fetchall()
+            tableprinter.printShoppingListTable(self.shoppinglist)
+        pass
+
     def __init__(self,
                  db,
                  taxCoeff=0.98,
@@ -113,6 +147,7 @@ class HaulToJita(cmd.Cmd):
         self.taxCoeff = taxCoeff
         self.minProfitPerM3 = minProfitPerM3
         self.minMargin = minMargin
+        self.client = AuthedClient()
         print('Looking for cheap stuff...')
         self.db.execSQLScript(
             sqlqueries.createCheapThanJitaTable(
@@ -129,5 +164,5 @@ class HaulToJita(cmd.Cmd):
         for pair in li:
             self.evalProfit(pair)
         c = self.db.execSQL(sqlqueries.summarizeRegionProfit, (self.taxCoeff,))
-        li = c.fetchall()
-        tableprinter.printRegionTradeSumTable(li)
+        self.summaryList = c.fetchall()
+        tableprinter.printRegionTradeSumTable(self.summaryList)
