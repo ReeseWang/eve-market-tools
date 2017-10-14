@@ -4,45 +4,13 @@ import logging
 import sqlqueries
 from evedatabase import Database
 from tornado.log import LogFormatter
-from prettytable import PrettyTable
 import cmd
 import readline
 import os
 import atexit
-from datetime import datetime
 import argparse
-
-
-def timefmt(timestamp, level=3):
-    time = datetime.strptime(
-        timestamp,
-        '%Y-%m-%d %H:%M:%S'
-    )
-    secs = int((datetime.utcnow() -
-                time).total_seconds())
-    d, h, m, s = '', '', '', ''
-    if secs >= 86400 and level >= 3:
-        d = '{}D '.format(secs // 86400)
-        secs %= 86400
-        h, m = '00:', '00'
-        pass
-    if secs > 3600 and level >= 2:
-        if not d:
-            h = '{:d}:'.format(secs // 3600)
-        else:
-            h = '{:02d}:'.format(secs // 3600)
-        secs %= 3600
-        m = '00'
-        pass
-    if secs > 60 and level >= 1:
-        if not h:
-            m = '{:d}'.format(secs // 60)
-        else:
-            m = '{:02d}'.format(secs // 60)
-        secs %= 60
-        pass
-    s = ':{:02d}'.format(secs)
-    return (d + h + m + s)
+import tableprinter
+from prettytable import PrettyTable
 
 
 def saveHistory(prevHistoryLen, filePath):
@@ -51,20 +19,6 @@ def saveHistory(prevHistoryLen, filePath):
     logger.debug('{} {}'.format(newHistoryLen, prevHistoryLen))
     readline.set_history_length(1000)
     readline.append_history_file(newHistoryLen - prevHistoryLen, filePath)
-
-
-def rangeString(r):
-    assert isinstance(r, str)
-    if r.isdigit():
-        if int(r) == 1:
-            return '1 jump'
-        else:
-            return (r + ' jumps')
-    else:
-        if r == 'solarsystem':
-            return 'System'
-        else:
-            return r.capitalize()
 
 
 class EMT(cmd.Cmd):
@@ -91,28 +45,7 @@ class EMT(cmd.Cmd):
             print('No orders found for {}.'.format(name))
             return
         print('\n', name, 'SELLER SUMMARY:\n')
-        for e in li:
-            self.sellt.add_row(
-                [
-                    '{:.1f} '.format(e['security']) +
-                    ' - '.join(
-                        [
-                            e['regionName'],  # Region name
-                            e['solarSystemName'],  # Solar system name
-                            # Station name, solar system name inc.
-                            # e[3][0:50]
-                        ]
-                    ),
-                    format(e['volumeRemain'], ',d'),  # Volume remain
-                    format(e['price'], ',.2f'),  # Price
-                    format(e['price']*e['volumeRemain'], ',.2f'),  # Sum
-                    timefmt(e['updated'], 1),  # Updated
-                    timefmt(e['issued'], 3)  # Issued
-                ]
-            )
-            pass
-        print(self.sellt)
-        self.sellt.clear_rows()
+        tableprinter.printSellOrdersTable(li)
 
     def do_buyerlist(self, arg):
         if arg:
@@ -135,30 +68,7 @@ class EMT(cmd.Cmd):
             print('No orders found for {}.'.format(name))
             return
         print('\n', name, 'BUYER SUMMARY:\n')
-        for e in li:
-            self.buyt.add_row(
-                [
-                    '{:.1f} '.format(e['security']) +
-                    ' - '.join(
-                        [
-                            e['regionName'],  # Region name
-                            e['solarSystemName'],  # Solar system name
-                            # Station name, solar system name inc.
-                            # e[3][0:40]
-                        ]
-                    ),
-                    format(e['volumeRemain'], ',d'),  # Volume remain
-                    format(e['price'], ',.2f'),  # Price
-                    format(e['price']*e['volumeRemain'], ',.2f'),  # Sum
-                    format(e['minVolume'], ',d'),  # Min volume
-                    rangeString(e['range']),  # Range
-                    timefmt(e['updated'], 1),  # Updated
-                    timefmt(e['issued'], 3)  # Issued
-                ]
-            )
-            pass
-        print(self.buyt)
-        self.buyt.clear_rows()
+        tableprinter.printBuyOrdersTable(li)
 
     def do_haultojita(self, arg):
         from haultojita import HaulToJita
@@ -202,39 +112,7 @@ class EMT(cmd.Cmd):
         self.taxCoeff = 0.98
 
     def initTables(self):
-        self.sellt = PrettyTable()
-        self.sellt.field_names = [
-            'Location',
-            'Remaining',
-            'Ask price / ISK',
-            'Sum / ISK',
-            'Updated ago',
-            'Issued ago'
-        ]
-        self.sellt.align = 'r'
-        self.sellt.align['Location'] = 'l'
-        # selltColAlign = 'lrrrrr'
-        # for i in range(0, len(selltColAlign)):
-        #     self.sellt.align[self.sellt.field_names[i]] = \
-        #         selltColAlign[i]
-        self.buyt = PrettyTable()
-        self.buyt.field_names = [
-            'Location',
-            'Remaining',
-            'Bid price / ISK',
-            'Sum / ISK',
-            'Min volume',
-            'Range',
-            'Updated ago',
-            'Issued ago'
-        ]
-        self.buyt.align = 'r'
-        self.buyt.align['Location'] = 'l'
-        self.buyt.align['Range'] = 'l'
-        # buytColAlign = 'llrrrrrr'
-        # for i in range(0, len(buytColAlign)):
-        #     self.buyt.align[self.buyt.field_names[i]] = \
-        #         buytColAlign[i]
+        pass
 
     def __init__(self, updateDynamic=True):
         super().__init__()
