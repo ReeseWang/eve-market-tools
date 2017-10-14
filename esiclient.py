@@ -218,6 +218,17 @@ class AuthedClient:
         cha = self.get('https://login.eveonline.com/oauth/verify').json()
         return cha['CharacterID']
 
+    def openMarketDetail(self, typeID):
+        try:
+            ID = int(typeID)
+        except ValueError:
+            self.logger.error('openMarketDetail: Please provide a '
+                              'valid typeID.')
+            return
+        self.post('https://esi.tech.ccp.is/latest/'
+                  'ui/openwindow/marketdetails/'
+                  '?datasource=tranquility&type_id=' + str(ID))
+
 
 if __name__ == '__main__':
     import sys
