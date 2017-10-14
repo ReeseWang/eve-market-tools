@@ -18,17 +18,9 @@ class HaulToJita(cmd.Cmd):
         except Exception as e:
             print(str(e))
 
-    def insertOrderPair(self, buy, sell, volume):
-        assert buy['typeID'] == sell['typeID']
+    def insertOrderPair(self, buyID, sellID, volume):
         self.db.execSQL(sqlqueries.insertOrderPairsQuery,
-                        (buy['typeID'],
-                         buy['orderID'],
-                         sell['orderID'],
-                         buy['price'],
-                         sell['price'],
-                         volume,
-                         buy['regionID'],
-                         sell['regionID']))
+                        (buyID, sellID, volume))
         pass
 
     def evalProfit(self, typeIDlocID):
@@ -74,23 +66,23 @@ class HaulToJita(cmd.Cmd):
                     # else:  # We're good to go
                     #     sellMinVolAlert = False
                 else:
-                    self.insertOrderPair(buyFrom[buyIdx],
-                                         sellTo[sellIdx],
+                    self.insertOrderPair(buyFrom[buyIdx]['orderID'],
+                                         sellTo[sellIdx]['orderID'],
                                          buyRemain)
                     sellConsumed += buyRemain
                     buyIdx += 1
                     buyConsumed = 0
             elif buyRemain > sellRemain:
-                self.insertOrderPair(buyFrom[buyIdx],
-                                     sellTo[sellIdx],
+                self.insertOrderPair(buyFrom[buyIdx]['orderID'],
+                                     sellTo[sellIdx]['orderID'],
                                      sellRemain)
                 buyConsumed += sellRemain
                 sellIdx += 1
                 sellMinVolAlert = True
                 sellConsumed = 0
             else:
-                self.insertOrderPair(buyFrom[buyIdx],
-                                     sellTo[sellIdx],
+                self.insertOrderPair(buyFrom[buyIdx]['orderID'],
+                                     sellTo[sellIdx]['orderID'],
                                      sellRemain)
                 buyIdx += 1
                 sellIdx += 1
@@ -129,6 +121,7 @@ class HaulToJita(cmd.Cmd):
         )
         print('Summarizing item and location...')
         self.db.execSQLScript(sqlqueries.createOrderPairsTable())
+        self.db.execSQLScript(sqlqueries.createOrderPairsView())
         c = self.db.execSQL(sqlqueries.pickHaulToJitaItemLocationCombination())
         li = c.fetchall()
         # print(li)

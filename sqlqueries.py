@@ -5,9 +5,11 @@ names = {
     'buy': 'buyOrders',
     # Sell orders table created by syncdyn
     'sell': 'sellOrders',
+    # View of all markets (stations and citadels)
+    'market': 'markets',
     # View of markets (stations and citadels) which sit in solar systems
     # whose security status satisfies given constraints.
-    'secMarket': 'secFilteredMarket',
+    'secMarket': 'secFilteredMarkets',
     # View of buy orders which sits in said markets.
     'secBuy': 'secFilteredBuyOrders',
     # View of sell orders which sits in said markets.
@@ -25,7 +27,8 @@ names = {
     # View of highest bid prices of each type of items in Jita
     'jitaHigh': 'jitaHighestBidPrices',
     # Table of selected buy-sell order pairs which can bring proit
-    'orderPairs': 'orderPairsOfInterest'
+    'orderPairs': 'orderPairsOfInterest',
+    'orderPairsView': 'orderPairsOfInterestView'
 }
 
 test = '''SELECT
@@ -41,8 +44,7 @@ LIMIT 30;
 def createSecFilteredMarketsView(minSec=-1, maxSec=1):
     names['minSec'] = minSec
     names['maxSec'] = maxSec
-    return ('''DROP VIEW IF EXISTS {secMarket};
-CREATE TEMP VIEW IF NOT EXISTS {secMarket}
+    return ('''CREATE TEMP VIEW IF NOT EXISTS {market}
 AS
 SELECT
     structure_id AS stationID,
@@ -57,10 +59,6 @@ FROM
     {pubStruct}
 INNER JOIN mapSolarSystems ON
     mapSolarSystems.solarSystemId = {pubStruct}.solar_system_id
-WHERE
-    {minSec} <= mapSolarSystems.security
-    AND
-    mapSolarSystems.security <= {maxSec}
 UNION ALL
 SELECT
     stationID,
@@ -72,10 +70,13 @@ SELECT
     constellationID,
     security
 FROM
-    staStations
+    staStations;
+DROP VIEW IF EXISTS {secMarket};
+CREATE TEMP VIEW IF NOT EXISTS {secMarket}
+AS
+SELECT * FROM {market}
 WHERE
-    {minSec} <= security AND security <= {maxSec}
-;
+    security >= {minSec} AND security <= {maxSec};
 ''').format_map(names)
 
 
@@ -210,7 +211,7 @@ WHERE
 
 insertOrderPairsQuery = (
     "INSERT INTO {orderPairs} VALUES (".format_map(names) +
-    ','.join(8*'?') +
+    ','.join(3*'?') +
     ");"
 )
 
@@ -219,24 +220,91 @@ def createOrderPairsTable():
     # perspective.
     return '''DROP TABLE IF EXISTS {orderPairs};
 CREATE TABLE {orderPairs} (
-    typeID INTEGER NOT NULL,
     buyOrderID INTEGER NOT NULL,
     sellOrderID INTEGER NOT NULL,
-    buyPrice REAL NOT NULL,
-    sellPrice REAL NOT NULL,
     volume INTEGER NOT NULL,
-    buyRegionID INTEGER NOT NULL,
-    sellRegionID INTEGER NOT NULL,
     PRIMARY KEY (buyOrderID, sellOrderID)
 );
 '''.format_map(names)
 
 
+def createOrderPairsView():
+    return '''DROP VIEW IF EXISTS {orderPairsView};
+CREATE TEMP VIEW {orderPairsView}
+AS
+SELECT
+    {orderPairs}.volume AS volume,
+    {orderPairs}.buyOrderID AS buyOrderID,
+    {sell}.type_id AS buyTypeID,
+    {sell}.price AS buyPrice,
+    {sell}.location_id AS buyLocationID,
+    {sell}.region_id AS buyRegionID,
+    {sell}.volume_total AS buyVolumeTotal,
+    {sell}.volume_remain AS buyVolumeRemain,
+    {sell}.price AS buyPrice,
+    {sell}.duration AS buyDuration,
+    {sell}.issued AS buyIssued,
+    {sell}.updated AS buyUpdated,
+    {market}B.solarSystemID AS buySolarSystemID,
+    {market}B.constellationID AS buyConstellationID,
+    {market}B.security AS buySecurity,
+    {market}B.stationName AS buyStationName,
+    invTypesB.typeName AS buyTypeName,
+    invNamesSSB.itemName AS buySolarSystemName,
+    invNamesCB.itemName AS buyConstellationName,
+    invNamesRB.itemName AS buyRegionName,
+    {orderPairs}.sellOrderID AS sellOrderID,
+    {buy}.type_id AS sellTypeID,
+    {buy}.location_id AS sellLocationID,
+    {buy}.region_id AS sellRegionID,
+    {buy}.volume_total AS sellVolumeTotal,
+    {buy}.volume_remain AS sellVolumeRemain,
+    {buy}.min_volume AS sellMinVolume,
+    {buy}.price AS sellPrice,
+    {buy}.range AS sellRange,
+    {buy}.duration AS sellDuration,
+    {buy}.issued AS sellIssued,
+    {buy}.updated AS sellUpdated,
+    {market}S.solarSystemID AS sellSolarSystemID,
+    {market}S.constellationID AS sellConstellationID,
+    {market}S.security AS sellSecurity,
+    {market}S.stationName AS sellStationName,
+    invTypesS.typeName AS sellTypeName,
+    invNamesSSS.itemName AS sellSolarSystemName,
+    invNamesCS.itemName AS sellConstellationName,
+    invNamesRS.itemName AS sellRegionName
+FROM
+    {orderPairs}
+INNER JOIN {sell} ON
+    {sell}.order_id = {orderPairs}.buyOrderID
+INNER JOIN {buy} ON
+    {buy}.order_id = {orderPairs}.sellOrderID
+INNER JOIN {market} AS {market}S ON
+    {market}S.stationID = sellLocationID
+INNER JOIN {market} AS {market}B ON
+    {market}B.stationID = buyLocationID
+INNER JOIN invNames AS invNamesSSS ON
+    invNamesSSS.itemID = sellSolarSystemID
+INNER JOIN invNames AS invNamesCS ON
+    invNamesCS.itemID = sellConstellationID
+INNER JOIN invNames AS invNamesRS ON
+    invNamesRS.itemID = sellRegionID
+INNER JOIN invNames AS invNamesSSB ON
+    invNamesSSB.itemID = buySolarSystemID
+INNER JOIN invNames AS invNamesCB ON
+    invNamesCB.itemID = buyConstellationID
+INNER JOIN invNames AS invNamesRB ON
+    invNamesRB.itemID = buyRegionID
+INNER JOIN invTypes AS invTypesS ON
+    invTypesS.typeID = sellTypeID
+INNER JOIN invTypes AS invTypesB ON
+    invTypesB.typeID = buyTypeID
+;'''.format_map(names)
+
+
 def pickHaulToJitaTargetBuyOrders():
     return '''SELECT
-    typeID,
     orderID,
-    regionID,
     locationID,
     volumeRemain,
     minVolume,
@@ -252,9 +320,7 @@ ORDER BY
 
 def pickHaulToJitaTargetSellOrders():
     return '''SELECT
-    typeID,
     orderID,
-    regionID,
     locationID,
     volumeRemain,
     price
