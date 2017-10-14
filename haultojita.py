@@ -2,6 +2,7 @@ import cmd
 import logging
 import sqlqueries
 from prettytable import PrettyTable
+import tableprinter
 
 
 class HaulToJita(cmd.Cmd):
@@ -127,3 +128,6 @@ class HaulToJita(cmd.Cmd):
         # print(li)
         for pair in li:
             self.evalProfit(pair)
+        c = self.db.execSQL(sqlqueries.summarizeRegionProfit, (self.taxCoeff,))
+        li = c.fetchall()
+        tableprinter.printRegionTradeSumTable(li)

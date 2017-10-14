@@ -33,7 +33,7 @@ regionTradeSumTable.field_names = [
     'From Region',
     'Cost / ISK',
     'Profit / ISK',
-    'Earning / ISK',
+    'Avg. Margin',
     'To Region'
 ]
 regionTradeSumTable.align = 'r'
@@ -151,7 +151,7 @@ def printRegionTradeSumTable(li):
                 e['buyRegionName'],
                 ISK(e['buyTotalISK']),
                 ISK(e['profit']),
-                ISK(e['sellTotalISK']),
+                format(e['profit']/e['buyTotalISK'], '.2%'),
                 e['sellRegionName']
             ]
         )
