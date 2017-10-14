@@ -3,6 +3,7 @@ from datetime import datetime
 
 sellOrdersTable = PrettyTable()
 sellOrdersTable.field_names = [
+    '',
     'Location',
     'Remaining',
     'Ask price / ISK',
@@ -15,6 +16,7 @@ sellOrdersTable.align['Location'] = 'l'
 
 buyOrdersTable = PrettyTable()
 buyOrdersTable.field_names = [
+    '',
     'Location',
     'Remaining',
     'Bid price / ISK',
@@ -30,6 +32,7 @@ buyOrdersTable.align['Range'] = 'l'
 
 regionTradeSumTable = PrettyTable()
 regionTradeSumTable.field_names = [
+    '',
     'From Region',
     'Cost / ISK',
     'Profit / ISK',
@@ -79,9 +82,10 @@ def timefmt(timestamp, level=3):
 
 def printSellOrdersTable(li):
     sellOrdersTable.clear_rows()
-    for e in li:
+    for i, e in enumerate(li):
         sellOrdersTable.add_row(
             [
+                i,
                 '{:.1f} '.format(e['security']) +
                 ' - '.join(
                     [
@@ -118,9 +122,10 @@ def rangeString(r):
 
 def printBuyOrdersTable(li):
     buyOrdersTable.clear_rows()
-    for e in li:
+    for i, e in enumerate(li):
         buyOrdersTable.add_row(
             [
+                i,
                 '{:.1f} '.format(e['security']) +
                 ' - '.join(
                     [
@@ -145,9 +150,10 @@ def printBuyOrdersTable(li):
 
 def printRegionTradeSumTable(li):
     regionTradeSumTable.clear_rows()
-    for e in li:
+    for i, e in enumerate(li):
         regionTradeSumTable.add_row(
             [
+                i,
                 e['buyRegionName'],
                 ISK(e['buyTotalISK']),
                 ISK(e['profit']),
