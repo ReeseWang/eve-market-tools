@@ -215,6 +215,38 @@ insertOrderPairsQuery = (
     ");"
 )
 
+summarizeRegionProfit = '''SELECT
+    buyRegionName,
+    SUM(buyPrice * volume) AS buyTotalISK,
+    SUM((? * sellPrice - buyPrice) * volume) AS profit,
+    SUM(sellPrice * volume) AS sellTotalISK,
+    sellRegionName
+FROM
+    {orderPairsView}
+GROUP BY
+    buyRegionID, sellRegionID
+ORDER BY
+    profit DESC
+;'''.format_map(names)
+
+buyListInRegion = '''SELECT
+    buyTypeID,
+    buyTypeName,
+    SUM(volume) AS volTotal,
+    MIN(buyPrice) AS minBuy,
+    MAX(sellPrice) AS maxSell,
+    MIN(sellPrice) AS minSell,
+    SUM((? * sellPrice - buyPrice) * volume) AS profit,
+FROM
+    {orderPairsView}
+WHERE
+    buyRegionID = ?
+GROUP BY
+    buyTypeID
+ORDER BY
+    profit DESC
+;'''.format_map(names)
+
 def createOrderPairsTable():
     # WARNING: From now on, 'buy' and 'sell' is from traders
     # perspective.
