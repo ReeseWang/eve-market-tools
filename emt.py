@@ -111,14 +111,10 @@ class EMT(cmd.Cmd):
         self.minProfitPerM3 = 500.0
         self.taxCoeff = 0.98
 
-    def initTables(self):
-        pass
-
     def __init__(self, updateDynamic=True):
         super().__init__()
         self.typeID = None  # Avoiding some error
         self.logger = logging.getLogger(__name__)
-        self.initTables()
         self.initConstants()
         self.db = Database(updateMarket=updateDynamic)
         self.db.execSQLScript(sqlqueries.createSecFilteredMarketsView(0.45, 1))
