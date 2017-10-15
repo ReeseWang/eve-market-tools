@@ -11,6 +11,16 @@ import time
 import threading
 
 dbPath = './db/market.sqlite'
+contrabandTypes = [
+    3713,
+    3721,
+    3727,
+    3729,
+    9844,
+    11855,
+    12478,
+    17796
+]
 
 
 class BuyOrder:
@@ -142,6 +152,8 @@ class EVESyncWorker:
 
     def fillOrderTupleLists(self, pordersList, preg, updateTime):
         for order in pordersList:
+            if order['type_id'] in contrabandTypes:
+                continue
             if order['is_buy_order']:
                 self.buyTuplesList.append(self.buyOrderTuple(order,
                                                              preg,
