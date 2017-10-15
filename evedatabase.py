@@ -12,17 +12,19 @@ import syncdyn
 
 class Database:
     def execSQL(self, sql, data=None):
-        if data:
-            self.logger.debug("Executing SQL:\n" + sql +
-                              "\nWith Data:\n" + repr(data))
-            return self._conn.execute(sql, data)
-        else:
-            self.logger.debug("Executing SQL:\n" + sql)
-            return self._conn.execute(sql)
+        with self.dbLock:
+            if data:
+                self.logger.debug("Executing SQL:\n" + sql +
+                                "\nWith Data:\n" + repr(data))
+                return self._conn.execute(sql, data)
+            else:
+                self.logger.debug("Executing SQL:\n" + sql)
+                return self._conn.execute(sql)
 
     def execSQLScript(self, sql):
-        self.logger.debug("Executing SQL:\n" + sql)
-        return self._conn.executescript(sql)
+        with self.dbLock:
+            self.logger.debug("Executing SQL:\n" + sql)
+            return self._conn.executescript(sql)
 
     def _get(self, id, idcol, table, cols):
         assert isinstance(id, int)
@@ -168,6 +170,7 @@ class Database:
         self.logger = logging.getLogger(__name__)
         self.marketDBLock = threading.Lock()
         self.sdeLock = threading.Lock()
+        self.dbLock = threading.Lock()
 
         self._conn = sqlite3.connect(':memory:',
                                      check_same_thread=False)
