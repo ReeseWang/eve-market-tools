@@ -149,7 +149,11 @@ class AuthedClient:
                 res = requests.get(url, headers=self.headers)
                 res.raise_for_status()
                 return res
-            except requests.exceptions.RequestException as error:
+            except requests.exceptions.ConnectionError as error:
+                self.logger.error('Connection Error in ESI client. '
+                                  'Retry after 10 seconds...')
+                time.sleep(10)
+            except requests.exceptions.HTTPError as error:
                 try:
                     errorstr = res.json()['error']
                     if res.status_code == 420:
@@ -191,7 +195,8 @@ class AuthedClient:
                         )
                         time.sleep(10)
                 except Exception as e:
-                    self.logger.critical('Unexpected error in ESI client.',
+                    self.logger.critical('Unexpected error in ESI client '
+                                         'while handling HTTPError',
                                          exc_info=e)
                     return
 
