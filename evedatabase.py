@@ -126,7 +126,6 @@ class Database:
             self.cacheTableToMemory('staStations')
             self.cacheTableToMemory('mapSolarSystems')
             self._cacheItemsPackVols()
-            self._conn.commit()
             self.execSQL("DETACH hdd;")
 
     def cacheMarketTables(self):
@@ -135,7 +134,6 @@ class Database:
             self.cacheTableToMemory('buyOrders')
             self.cacheTableToMemory('sellOrders')
             self.cacheTableToMemory('publicStructures')
-            self._conn.commit()
             self.execSQL("DETACH hdd;")
 
     def cacheDynWorker(self):
