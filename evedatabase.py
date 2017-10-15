@@ -77,7 +77,6 @@ class Database:
             "SELECT typeID, volume FROM hdd.invVolumes;").fetchall()
         self.logger.info("Found {} item types "
                          "which has packaged volume.".format(len(res)))
-        print(res[0])
         self.typesPackVol = {str(t['typeID']): t['volume'] for t in res}
 
     def _getType(self, typeID, cols):
